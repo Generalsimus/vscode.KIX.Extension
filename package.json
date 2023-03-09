@@ -1,0 +1,83 @@
+{
+  "name": "kix",
+  "displayName": "KIX",
+  "description": "",
+  "icon": "documentation/logo.png",
+  "publisher": "Generalsimus",
+  "version": "5.1.20230302",
+  "engines": {
+    "vscode": "^1.36.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "workspaceTrust": {
+    "request": "never"
+  },
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Generalsimus/vscode.KIX.Extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Generalsimus/vscode.KIX.Extension/issues"
+  },
+  "keywords": [
+    "KIX",
+    "kix",
+    "KTS",
+    "kts",
+    "KJS",
+    "kjs"
+  ],
+  "author": "Generalsimus",
+  "license": "MIT",
+  "contributes": {
+    "languages": [
+      {
+        "id": "kix",
+        "aliases": [
+          "KIX"
+        ],
+        "extensions": [
+          ".kjs",
+          ".kts"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kix",
+        "scopeName": "source.kts",
+        "path": "./syntaxes/Kix.tmLanguage.json",
+        "unbalancedBracketScopes": [
+          "keyword.operator.relational",
+          "storage.type.function.arrow",
+          "keyword.operator.bitwise.shift",
+          "punctuation.definition.tag"
+        ],
+        "aliases": [
+          "KIX TypeScript",
+          "KIX kts",
+          "kts"
+        ],
+        "embeddedLanguages": {
+          "meta.tag.kts": "jsx-tags",
+          "meta.tag.without-attributes.kts": "jsx-tags",
+          "meta.tag.attributes.kts": "kix",
+          "meta.embedded.expression.kts": "kix",
+          "meta.style.css.tag.kts": "css",
+          "source.css": "css"
+        },
+        "tokenTypes": {
+          "entity.name.type.instance.jsdoc": "other",
+          "entity.name.function.tagged-template": "other",
+          "meta.import string.quoted": "other",
+          "variable.other.jsdoc": "other"
+        }
+      }
+    ]
+  }
+}
