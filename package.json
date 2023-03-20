@@ -1,0 +1,87 @@
+{
+	"name": "kix-embedded-language-service",
+	"description": "A language server example using language services to support embedded languages",
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"version": "1.0.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vscode-extension-samples"
+	},
+	"publisher": "vscode-samples",
+	"categories": [],
+	"keywords": [],
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [],
+	"main": "./client/out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "kix",
+				"aliases": [
+					"KIX"
+				],
+				"extensions": [
+					".kjs",
+					".kts"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "kix",
+				"scopeName": "source.kts",
+				"path": "./syntaxes/Kix.tmLanguage.json",
+				"unbalancedBracketScopes": [
+					"keyword.operator.relational",
+					"storage.type.function.arrow",
+					"keyword.operator.bitwise.shift",
+					"punctuation.definition.tag"
+				],
+				"aliases": [
+					"KIX TypeScript",
+					"KIX kts",
+					"kts"
+				],
+				"embeddedLanguages": {
+					"meta.tag.kts": "jsx-tags",
+					"meta.tag.without-attributes.kts": "jsx-tags",
+					"meta.tag.attributes.kts": "kix",
+					"meta.embedded.expression.kts": "kix",
+					"meta.style.css.tag.kts": "css",
+					"source.css": "css"
+				},
+				"tokenTypes": {
+					"entity.name.type.instance.jsdoc": "other",
+					"entity.name.function.tagged-template": "other",
+					"meta.import string.quoted": "other",
+					"variable.other.jsdoc": "other"
+				}
+			}
+		],
+		"snippets": [
+			{
+				"language": "kix",
+				"path": "./snippets/snippets.json"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "cd client && npm install && cd .. && npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+	},
+	"devDependencies": {
+		"@types/mocha": "^5.2.7",
+		"@types/node": "^16.11.7",
+		"@typescript-eslint/eslint-plugin": "^4.23.0",
+		"@typescript-eslint/parser": "^4.23.0",
+		"eslint": "^7.26.0",
+		"typescript": "^4.5.5"
+	}
+}
