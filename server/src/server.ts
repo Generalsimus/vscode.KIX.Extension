@@ -4,36 +4,19 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { getLanguageService } from 'vscode-html-languageservice';
-import { createConnection, InitializeParams, ProposedFeatures, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver';
+import { createConnection, InitializedParams, InitializeParams, ProposedFeatures, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
+// import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
+// import { CustomLanguageServiceHost } from '../../client/src/host';
 
 
 
-class Host implements ts.LanguageServiceHost {
-	fileCatches = new Map<string, ts.SourceFile>();
-	getCurrentDirectory(){
-		return "ROOOT_DIR";
-	}
-	getCompilationSettings(){
 
-	},
-	getScriptFileNames() {
-		return Array.from(this.fileCatches.keys());
-	}
-	getScriptSnapshot(fileName: string){ 
-		const sourceFile = this.fileCatches.get(fileName)?.getFullText();
-		if(sourceFile === undefined) return undefined;
-
-		return ts.ScriptSnapshot.fromString(sourceFile);
-	}
-
-}
-const proj = ts.createLanguageService(
-	new Host() as any,
-	ts.createDocumentRegistry(),
-	true
-);
+// const languageService = ts.createLanguageService(
+// 	new CustomLanguageServiceHost(),
+// 	ts.createDocumentRegistry(),
+// 	true
+// );
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
@@ -46,7 +29,8 @@ const htmlLanguageService = getLanguageService();
 
 connection.onInitialize((_params: InitializeParams) => {
 	console.log("🚀 --> onInitialize", _params);
-
+	// connection.onred
+	// connection.sendRequest("INITIAL_workspaceFolders", _params.workspaceFolders);
 	return {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Full,
@@ -57,24 +41,38 @@ connection.onInitialize((_params: InitializeParams) => {
 		}
 	};
 });
+// connection.onInitialized((_params: InitializedParams) => {
+// 	console.log("🚀 --> onInitializedd", _params);
+// 	connection.sendRequest("INITIAL_workspaceFolders", _params);
+	// return {
+	// 	capabilities: {
+	// 		textDocumentSync: TextDocumentSyncKind.Full,
+	// 		// Tell the client that the server supports code completion
+	// 		completionProvider: {
+	// 			resolveProvider: false
+	// 		}
+	// 	}
+	// };
+// });
 
-connection.onCompletion(async (textDocumentPosition, token) => {
-	const document = documents.get(textDocumentPosition.textDocument.uri);
-	console.log("🚀 --> onCompletion");
 
-	if (!document) {
-		return null;
-	}
-	// proj.getCompletionsAtPosition
-	const res = htmlLanguageService.doComplete(
-		document,
-		textDocumentPosition.position,
-		htmlLanguageService.parseHTMLDocument(document)
-	);
-	console.log("🚀 --> file: server.ts:99 --> connection.onCompletion --> res:", res);
+// connection.onCompletion(async (textDocumentPosition, token) => {
+// 	const document = documents.get(textDocumentPosition.textDocument.uri);
+// // 	console.log("🚀 --> onCompletion");
 
-	return res;
-});
+// 	if (!document) {
+// 		return null;
+// 	}
+// 	// proj.getCompletionsAtPosition
+// 	const res = htmlLanguageService.doComplete(
+// 		document,
+// 		textDocumentPosition.position,
+// 		htmlLanguageService.parseHTMLDocument(document)
+// 	);
+// 	console.log("🚀 --> file: server.ts:99 --> connection.onCompletion --> res:", res);
+
+// 	return res;
+// });
 
 documents.listen(connection);
 connection.listen();
