@@ -28,7 +28,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const htmlLanguageService = getLanguageService();
 
 connection.onInitialize((_params: InitializeParams) => {
-	console.log("🚀 --> onInitialize", _params);
+	// console.log("🚀 --> onInitialize", _params);
 	// connection.onred
 	// connection.sendRequest("INITIAL_workspaceFolders", _params.workspaceFolders);
 	return {

@@ -4,19 +4,21 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { commands, CompletionItemKind, CompletionList, ExtensionContext, TextDocument, Uri, workspace } from 'vscode';
+import { commands, CompletionItem, CompletionList, ExtensionContext, Position, Range, workspace } from 'vscode';
 import { getLanguageService } from 'vscode-html-languageservice';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
-import { getCSSVirtualContent, isInsideStyleRegion } from './embeddedSupport';
 import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { CustomLanguageServiceHost } from './host';
 import { findContentLocationNode } from './utils/findContentLocationNode';
 import { createStyleTagContent } from './utils/createStyleTagContent';
-import { removeAllContentFromString } from './utils/removeAllContentFromString';
+import { createScriptTagContent } from './utils/createScriptTagContent';
+import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
+import { getPositionFromTextLineColumn } from './utils/getPositionFromTextLineColumn';
+// import { removeAllContentFromString } from './utils/removeAllContentFromString';
 
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 
-const htmlLanguageService = getLanguageService();
+// const htmlLanguageService = getLanguageService();
 let languageService: ts.LanguageService;
 export const getTSLanguageService = () => {
 	if (languageService === undefined) {
@@ -49,17 +51,16 @@ export function activate(context: ExtensionContext) {
 	const virtualDocumentContents = new Map<string, string>();
 	const embeddedFilesContent = new Map<string, string>();
 
-	workspace.registerTextDocumentContentProvider('embedded-content', {
+	workspace.registerTextDocumentContentProvider(EMBEDDED_LANGUAGE_SCHEMA, {
 		provideTextDocumentContent: uri => {
-			console.log("🚀 --> file: extension.ts:51 --> activate --> uri:", uri);
-			// const originalUri = uri.path.slice(1).slice(0, -4);
-			// const decodedUri = decodeURIComponent(originalUri);
-			// console.log("🚀 --> file: extension.ts:42 --> activate --> uri:", { uri, originalUri, decodedUri, embeddedFilesContent:embeddedFilesContent.keys() });
-			// return virtualDocumentContents.get(decodedUri);
+			// console.log("🚀 --> file: extension.ts:54 --> activate --> uri:", uri);
+
+			// console.log("🚀 --> file: --> :", uri.path, "\n", embeddedFilesContent.get(uri.path));
 
 			return embeddedFilesContent.get(uri.path);
 		}
 	});
+	// workspace.registerFileSystemProvider
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{
@@ -68,7 +69,7 @@ export function activate(context: ExtensionContext) {
 			/** A Uri [scheme](#Uri.scheme), like `file` or `untitled`. */
 			scheme: "file",
 			/** A glob pattern, like `*.{ts,js}`. */
-			// pattern: `*.{kts,kjs,ts,js}`
+			// pattern: `*.{kts,kjs}`
 		}],
 		middleware: {
 			provideCompletionItem: async (document, position, context, token, next) => {
@@ -77,12 +78,9 @@ export function activate(context: ExtensionContext) {
 					originalUri,
 					document.getText(),
 					ts.ScriptTarget.Latest,
-					true,
+					false,
 					ts.ScriptKind.KTS
 				);
-
-
-
 
 				const offset = document.offsetAt(position);
 
@@ -91,6 +89,7 @@ export function activate(context: ExtensionContext) {
 					const { content, uri } = createStyleTagContent(document, contentNode);
 
 					embeddedFilesContent.set(uri.path, content);
+
 					return await commands.executeCommand<CompletionList>(
 						'vscode.executeCompletionItemProvider',
 						uri,
@@ -99,47 +98,64 @@ export function activate(context: ExtensionContext) {
 					);
 				}
 
-				const removeStyleTagUnsafeContent = (textContent: string, styleTagChildNodes: ts.JsxElement[]) => {
-					for (const styleTagNode of styleTagChildNodes) {
-						const { pos, end } = styleTagNode.children;
-						textContent = textContent.slice(0, pos) +
-							removeAllContentFromString(textContent.slice(pos, end)) +
-							textContent.slice(end, textContent.length);
 
-					}
-					return textContent;
+
+
+				const { uri, position: updatedPosition, textContent: updatedTextContent, areaController } = createScriptTagContent(
+					document,
+					position,
+					offset,
+					file.kixStyleTagChildNodes,
+					file.kixScriptTagChildNodes
+				);
+				// try {
+
+				// 	console.log("🚀 -->  updatedPosition1:", updatedTextContent.split("\n")[updatedPosition.line].split("")[updatedPosition.character - 1]);
+				// 	console.log("🚀 -->  updatedPosition2:", document.getText().split("\n")[position.line].split("")[position.character - 1]);
+
+				// } catch (error) {
+				// 	console.log("🚀 --> file: extension.ts:129 --> provideCompletionItem: --> error:", "error");
+
+				// }
+				// console.log({
+				// 	uri,
+				// 	updatedPosition,
+				// 	triggerCharacter: context.triggerCharacter
+				// });
+				// embeddedFilesContent.set(uri.path, document.getText());
+				embeddedFilesContent.set(uri.path, updatedTextContent);
+				const completionList = await commands.executeCommand<CompletionList>(
+					'vscode.executeCompletionItemProvider',
+					uri,
+					// position,
+					updatedPosition,
+					context.triggerCharacter
+				);
+
+
+				return {
+					items: completionList.items.map(item => {
+						const { range } = item;
+
+						if (range) {
+							if (range instanceof Range) {
+								item.range = areaController.updateRange(range);
+							} else {
+								const { inserting, replacing } = range;
+								range.inserting = areaController.updateRange(inserting);
+								range.replacing = areaController.updateRange(replacing);
+							}
+						}
+
+						return item;
+					}),
+					isIncomplete: completionList.isIncomplete
 				};
-				const createOffsetConteroler=()=>{
-					
-				}
-				const makeScriptTagsSafe = (textContent: string, offset: number, scriptTagChildNodes: ts.JsxElement[]) => {
-					const insideTagName = "div";
-					const startTagName = `<${insideTagName}>\n`;
-					const endTagName = `\n</${insideTagName}>`;
-					textContent = `${startTagName}${textContent}${endTagName}`;
-					// offset += startTagName.length;
-					let plusSizes = 
-					for (const scriptTaNode of scriptTagChildNodes) {
-						const { pos, end } = scriptTaNode.children;
-						textContent = textContent.slice(0, pos) +
-							`removeAllContentFromString(textContent.slice(pos, end))` +
-							textContent.slice(end, textContent.length);
-						const ss = `{()=>{}}`;
-
-					}
-
-				};
-				const createScriptTagContent = (document: TextDocument, styleTagChildNodes: ts.JsxElement[], scriptTagChildNodes: ts.JsxElement[]) => {
-					const textContent = document.getText();
-					const safeTextContent = removeStyleTagUnsafeContent(textContent, styleTagChildNodes);
-					makeScriptTagsSafe(safeTextContent, offset, scriptTagChildNodes);
-					// console.log("🚀 --> file: extension.ts:112 --> createScriptTagContent --> safeTextContent:", safeTextContent);
-					// safeTextContent, 
-
-				};
-				createScriptTagContent(document, file.kixStyleTagChildNodes, file.kixScriptTagChildNodes);
-
-			}
+			},
+			// provideHover: (document, position, token, next) => {
+			// 	console.log("🚀 --> file: AAAAAAAAAAAA:", document.getText());
+			// 	return null as any;
+			// },
 		}
 	};
 
@@ -150,22 +166,13 @@ export function activate(context: ExtensionContext) {
 		serverOptions,
 		clientOptions
 	);
+
+
 	// Start the client. This will also launch the server
-
-
-	// client.onRequest("INITIAL_workspaceFolders", (aargs) => {
-	// 	console.log("🚀 --> file: extension.ts:122 --> client.onRequest --> aargs:", aargs);
-
-	// });
 	client.start();
-	// console.log("🚀 --> file: extension.ts:124 --> activate --> client:", client);
 }
 
 export function deactivate(): Thenable<void> | undefined {
 	console.log("🚀 --> deactivate");
-	// debugger;
-	if (!client) {
-		return undefined;
-	}
-	return client.stop();
+	return client?.stop();
 }

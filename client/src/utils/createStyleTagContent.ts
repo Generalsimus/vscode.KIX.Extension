@@ -1,6 +1,7 @@
 import { TextDocument, Uri } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { removeAllContentFromString } from './removeAllContentFromString';
+import { EMBEDDED_LANGUAGE_SCHEMA } from './helpers';
 
 export  	const createStyleTagContent = (document: TextDocument, contentNode: ts.JsxElement) => {
 	const originalUri = document.uri.toString(true);
@@ -17,7 +18,7 @@ export  	const createStyleTagContent = (document: TextDocument, contentNode: ts.
 	}
 	
 	return { 
-		uri: Uri.parse(`embedded-content://css/${encodeURIComponent(
+		uri: Uri.parse(`${EMBEDDED_LANGUAGE_SCHEMA}://css/${encodeURIComponent(
 			originalUri
 		)}${contentNode.pos}.css`),
 		content: cssContent
