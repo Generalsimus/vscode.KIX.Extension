@@ -4,42 +4,20 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { commands, CompletionItem, CompletionList, ExtensionContext, Position, Range, workspace } from 'vscode';
-import { getLanguageService } from 'vscode-html-languageservice';
+import { commands, CompletionList, ExtensionContext, Range, workspace } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
 import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-import { CustomLanguageServiceHost } from './host';
 import { findContentLocationNode } from './utils/findContentLocationNode';
 import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
-import { getPositionFromTextLineColumn } from './utils/getPositionFromTextLineColumn';
-// import { removeAllContentFromString } from './utils/removeAllContentFromString';
 
 let client: LanguageClient | undefined;
 
-// const htmlLanguageService = getLanguageService();
-let languageService: ts.LanguageService;
-export const getTSLanguageService = () => {
-	if (languageService === undefined) {
-		return languageService = ts.createLanguageService(
-			new CustomLanguageServiceHost("./"),
-			ts.createDocumentRegistry(),
-			ts.LanguageServiceMode.PartialSemantic
-		);
-	}
-	return languageService;
-};
-// const languageService = ;
 export function activate(context: ExtensionContext) {
-	console.log("🚀 --> activate", context);
 
-
-	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
 	const serverOptions: ServerOptions = {
 		run: { module: serverModule, transport: TransportKind.ipc },
 		debug: {
@@ -47,20 +25,18 @@ export function activate(context: ExtensionContext) {
 			transport: TransportKind.ipc,
 		}
 	};
-	// CompletionItemKind.
-	const virtualDocumentContents = new Map<string, string>();
+
+
 	const embeddedFilesContent = new Map<string, string>();
 
 	workspace.registerTextDocumentContentProvider(EMBEDDED_LANGUAGE_SCHEMA, {
 		provideTextDocumentContent: uri => {
-			// console.log("🚀 --> file: extension.ts:54 --> activate --> uri:", uri);
 
-			// console.log("🚀 --> file: --> :", uri.path, "\n", embeddedFilesContent.get(uri.path));
 
 			return embeddedFilesContent.get(uri.path);
 		}
 	});
-	// workspace.registerFileSystemProvider
+
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{
@@ -108,26 +84,13 @@ export function activate(context: ExtensionContext) {
 					file.kixStyleTagChildNodes,
 					file.kixScriptTagChildNodes
 				);
-				// try {
 
-				// 	console.log("🚀 -->  updatedPosition1:", updatedTextContent.split("\n")[updatedPosition.line].split("")[updatedPosition.character - 1]);
-				// 	console.log("🚀 -->  updatedPosition2:", document.getText().split("\n")[position.line].split("")[position.character - 1]);
 
-				// } catch (error) {
-				// 	console.log("🚀 --> file: extension.ts:129 --> provideCompletionItem: --> error:", "error");
-
-				// }
-				// console.log({
-				// 	uri,
-				// 	updatedPosition,
-				// 	triggerCharacter: context.triggerCharacter
-				// });
-				// embeddedFilesContent.set(uri.path, document.getText());
 				embeddedFilesContent.set(uri.path, updatedTextContent);
+
 				const completionList = await commands.executeCommand<CompletionList>(
 					'vscode.executeCompletionItemProvider',
 					uri,
-					// position,
 					updatedPosition,
 					context.triggerCharacter
 				);
@@ -152,10 +115,6 @@ export function activate(context: ExtensionContext) {
 					isIncomplete: completionList.isIncomplete
 				};
 			},
-			// provideHover: (document, position, token, next) => {
-			// 	console.log("🚀 --> file: AAAAAAAAAAAA:", document.getText());
-			// 	return null as any;
-			// },
 		}
 	};
 
