@@ -1,15 +1,14 @@
 import { newLIneCharCode } from './helpers';
 
-export const removeAllContentFromString = (text: string) => {
+export const removeAllContentFromString = (text: string, startIndex = 0, endIndex = text.length) => {
 	let content = "";
-	let index = 0;
-	const length = text.length;
-	while (index <= length) {
-		if (newLIneCharCode === text.charCodeAt(index)) {
-			content += "\n";
+	while (startIndex < endIndex) {
+		if (newLIneCharCode === text.charCodeAt(startIndex)) {
+			content = content + "\n";
+		} else {
+			content = content + " ";
 		}
-		index++;
+		startIndex++;
 	}
 	return content;
-	// return text.replace(/^[^(\r\n|\n|\r)]+/gm, "");
 };

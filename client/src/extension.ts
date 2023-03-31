@@ -15,6 +15,7 @@ import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext) {
+	console.log("🚀 --> file: extension.ts:18 --> activate --> context:", context);
 
 	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
 
@@ -66,7 +67,7 @@ export function activate(context: ExtensionContext) {
 
 					embeddedFilesContent.set(uri.path, content);
 
-					return await commands.executeCommand<CompletionList>(
+					return commands.executeCommand<CompletionList>(
 						'vscode.executeCompletionItemProvider',
 						uri,
 						position,
@@ -115,6 +116,10 @@ export function activate(context: ExtensionContext) {
 					isIncomplete: completionList.isIncomplete
 				};
 			},
+			provideHover: (document, position, token, next) => {
+				console.log("🚀 --> file: extension.ts:123 --> activate --> document:", document);
+				return null as any;
+			}
 		}
 	};
 
@@ -132,6 +137,5 @@ export function activate(context: ExtensionContext) {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-	console.log("🚀 --> deactivate");
 	return client?.stop();
 }

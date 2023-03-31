@@ -5827,9 +5827,121 @@
 				}
 			]
 		},
+		"SSSSS": {
+			"name": "metaeeee.tag.kts",
+			"begin2222": "(?=(<)              (?=((<\\s*)|(\\s+))(?!\\?)|\\/?>))",
+			"end33333": "(/>)|(?:(</)          ?\\s*(>))",
+
+
+
+			"begin": "(?=(<)\\s*(\\bstyle\\b)(?=(\\s*)))",
+			"end": "(/>)|(?:(</)\\s*(?:([_$[:alpha:]][-_$[:alnum:].]*)(?<!\\.|-)(:))?((?:[a-z][a-z0-9]*|([_$[:alpha:]][-_$[:alnum:].]*))(?<!\\.|-))?\\s*(>))",
+
+
+
+
+			"endmin": "(<\\/)\\s*(style)(\\s*>)",
+
+			"endqqq": "(<\\/)\\s*(\\bstyle\\b)(?=(\\s*))(>)",
+
+			"beginaaaa": "(?=(<)\\s*(?:([_$()][-_$(\bstyle\b).]*)(?<!\\.|-)(:))?((?:(\bstyle\b)*|([_$(\bstyle\b)][-_$(\bstyle\b).]*))(?<!\\.|-))(?=((<\\s*)|(\\s+))(?!\\?)|\\/?>))",
+			"endcccc": "(/>)|(?:(</)\\s*(?:([_$()][-_$(\bstyle\b).]*)(?<!\\.|-)(:))?((?:(\bstyle\b)*|([_$(\bstyle\b)][-_$(\bstyle\b).]*))(?<!\\.|-))?\\s*(>))",
+
+
+
+  
+
+            "ssss":"\\s*(?:([_$(style)][-_$(style).]*)(?<!\\.|-)(:))?((?:(style)*|([_$(style)][-_$(style).]*))(?<!\\.|-))",
+			
+
+
+
+
+
+			"begin5": "(?=(<)\\s*(\\bstyle\\b)(?=(\\s*)))",
+			"end6": "(/>)|(?:(</)\\s*(?:([_$[:alpha:]][-_$[:alnum:].]*)(?<!\\.|-)(:))?((?:[a-z][a-z0-9]*|([_$[:alpha:]][-_$[:alnum:].]*))(?<!\\.|-))?\\s*(>))",
+
+
+			"begin22228": "(?=(<)\\s*(?:([_$(style)][-_$(style).]*)(?<!\\.|-)(:))?(style)(?=((<\\s*)|(\\s+))(?!\\?)|\\/?>))",
+			"begin222": "(?=(<)\\s*(?:([_$(style)][-_$(style).]*)(?<!\\.|-)(:))?(style)(?=((<\\s*)|(\\s+))(?!\\?)|\\/?>))",
+			"end44444": "(/>)|(?:(</) ?\\s*(>))",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.tag.end.kts"
+				},
+				"2": {
+					"name": "punctuation.definition.tag.begin.kts"
+				},
+				"3": {
+					"name": "entity.name.tag.namespace.kts"
+				},
+				"4": {
+					"name": "punctuation.separator.namespace.kts"
+				},
+				"5": {
+					"name": "entity.name.tag.kts"
+				},
+				"6": {
+					"name": "support.class.component.kts"
+				},
+				"7": {
+					"name": "punctuation.definition.tag.end.kts"
+				}
+			},
+			"patterns": [
+				{
+						"begin": "(<)\\s*(?:([_$[:alpha:]][-_$[:alnum:].]*)(?<!\\.|-)(:))?((?:[a-z][a-z0-9]*|([_$[:alpha:]][-_$[:alnum:].]*))(?<!\\.|-))(?=((<\\s*)|(\\s+))(?!\\?)|\\/?>)",
+				"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.tag.begin.kts"
+						},
+						"2": {
+							"name": "entity.name.tag.namespace.kts"
+						},
+						"3": {
+							"name": "punctuation.separator.namespace.kts"
+						},
+						"4": {
+							"name": "entity.name.tag.kts"
+						},
+						"5": {
+							"name": "support.class.component.kts"
+						}
+					},
+					"end": "(?=[/]?>)",
+					"patterns": [
+						{
+							"include": "#comment"
+						},
+						{
+							"include": "#type-arguments"
+						},
+						{
+							"include": "#jsx-tag-attributes"
+						}
+					]
+				},
+				{
+					"begin": "(>)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.tag.end.kts"
+						}
+					},
+					"end": "(?=</)",
+					"contentName": "metabbb.jsx.children.kts",
+					"patterns": [
+						{
+							"include": "source.css"
+						}
+					]
+				}
+			]
+		},
 		"jsx-style-tag-children": {
 			"begin": "(?<=style.*>)(?!</style)",
 			"end": "(?=</style)",
+			"name": "meta.embedded.block.kix.style",
 			"contentName": "source.css",
 			"patterns": [
 				{
@@ -5843,7 +5955,7 @@
 					"include": "#jsx-script-tag-children"
 				},
 				{
-					"include": "#jsx-style-tag-children"
+					"include": "#SSSSS"
 				},
 				{
 					"include": "#jsx-tag-without-attributes"
