@@ -4,18 +4,19 @@ import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { makeScriptTagsSafe } from './makeScriptTagsSafe';
 import { getLineColumnFromTextPosition } from './getLineColumnFromTextPosition';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './helpers';
+import { DocumentHost } from '../host';
 
-export const createScriptTagContent = (
-	document: TextDocument,
+export const createScriptTagContent = ( 
+	host: DocumentHost,
 	position: Position,
 	offset: number,
-	styleTagChildNodes: ts.JsxElement[],
-	scriptTagChildNodes: ts.JsxElement[]
 ) => {
-	const originalUri = document.uri.toString(true);
-	const textContent = document.getText();
+	const originalUri = host.fileName;
+	const textContent = host.textContent;
+	const styleTagChildNodes = host.sourceFile.kixStyleTagChildNodes;
+	const scriptTagChildNodes = host.sourceFile.kixScriptTagChildNodes;
 	const safeTextContent = removeStyleTagUnsafeContent(textContent, styleTagChildNodes);
-	
+
 	const isTypescriptFile = /(\.kts)$/gim.test(originalUri);
 	const fileExt = isTypescriptFile ? 'tsx' : 'jsx';
 
@@ -28,7 +29,7 @@ export const createScriptTagContent = (
 		offset: updatedOffset,
 		areaController,
 	} = makeScriptTagsSafe(safeTextContent, offset, scriptTagChildNodes);
-	
+
 	const { line, column } = getLineColumnFromTextPosition(updatedTextContent, updatedOffset);
 
 	return {

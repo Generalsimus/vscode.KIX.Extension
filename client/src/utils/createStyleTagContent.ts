@@ -2,10 +2,11 @@ import { TextDocument, Uri } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { removeAllContentFromString } from './removeAllContentFromString';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './helpers';
+import { DocumentHost } from '../host';
 
-export const createStyleTagContent = (document: TextDocument, contentNode: ts.JsxElement) => {
-	const originalUri = document.uri.toString(true);
-	const textContent = document.getText();
+export const createStyleTagContent = (host: DocumentHost, contentNode: ts.JsxElement) => {
+	const originalUri = host.fileName;
+	const textContent = host.textContent;
 	let cssContent = "";
 	let lastPos = 0;
 	const { children } = contentNode;

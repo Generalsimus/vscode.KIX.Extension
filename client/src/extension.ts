@@ -4,15 +4,17 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { commands, CompletionList, ExtensionContext, Range, workspace } from 'vscode';
+import { commands, CompletionList, ExtensionContext, Range, TextDocument, workspace } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
 import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-import { findContentLocationNode } from './utils/findContentLocationNode';
+import { findContentLocationNode } from './host/utils/findContentLocationNode';
 import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
+import { DocumentHost } from './host';
 
 let client: LanguageClient | undefined;
+
 
 export function activate(context: ExtensionContext) {
 	console.log("🚀 --> file: extension.ts:18 --> activate --> context:", context);
@@ -28,7 +30,11 @@ export function activate(context: ExtensionContext) {
 	};
 
 
+	const fileContentControllerHosts = new Map<string, DocumentHost>();
 	const embeddedFilesContent = new Map<string, string>();
+	const getDocumentHost = (document: TextDocument) => {
+
+	}
 
 	workspace.registerTextDocumentContentProvider(EMBEDDED_LANGUAGE_SCHEMA, {
 		provideTextDocumentContent: uri => {
@@ -49,6 +55,17 @@ export function activate(context: ExtensionContext) {
 			// pattern: `*.{kts,kjs}`
 		}],
 		middleware: {
+			didOpen(document, next) {
+				const fileController = new DocumentHost(document, embeddedFilesContent);
+				fileContentControllerHosts.set(fileController.fileName, fileController);
+				next(document);
+			},
+			didChange(documentChangeEvent, next) {
+
+				const fileController = new DocumentHost(documentChangeEvent.document, embeddedFilesContent);
+				fileContentControllerHosts.set(fileController.fileName, fileController);
+				next(documentChangeEvent);
+			},
 			provideCompletionItem: async (document, position, context, token, next) => {
 				const originalUri = document.uri.toString(true);
 				const file: ts.SourceFile = ts.createSourceFile(
@@ -63,7 +80,7 @@ export function activate(context: ExtensionContext) {
 
 				const contentNode = findContentLocationNode(offset, file.kixStyleTagChildNodes);
 				if (contentNode !== undefined) {
-					const { content, uri } = createStyleTagContent(document, contentNode);
+					const { content, uri } = createStyleTagContent(this, contentNode);
 
 					embeddedFilesContent.set(uri.path, content);
 
