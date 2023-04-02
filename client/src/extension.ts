@@ -4,14 +4,11 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { commands, CompletionList, ExtensionContext, Range, TextDocument, workspace } from 'vscode';
+import { ExtensionContext, TextDocument, workspace } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
-import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-import { findContentLocationNode } from './host/utils/findContentLocationNode';
-import { createStyleTagContent } from './utils/createStyleTagContent';
-import { createScriptTagContent } from './utils/createScriptTagContent';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
-import { DocumentHost } from './host';
+import { TextDocumentController } from './host';
+import { uriToString } from './host/utils/uriToString';
 
 let client: LanguageClient | undefined;
 
@@ -30,20 +27,24 @@ export function activate(context: ExtensionContext) {
 	};
 
 
-	const fileContentControllerHosts = new Map<string, DocumentHost>();
+	const fileContentControllerHosts = new Map<string, TextDocumentController>();
 	const embeddedFilesContent = new Map<string, string>();
-	const getDocumentHost = (document: TextDocument) => {
-
-	}
+	const createTextDocumentController = (document: TextDocument) => {
+		const documentController = new TextDocumentController(document, embeddedFilesContent);
+		fileContentControllerHosts.set(uriToString(document.uri), documentController);
+		return documentController;
+	};
+	const getTextDocumentController = (document: TextDocument) => {
+		return fileContentControllerHosts.get(uriToString(document.uri)) || createTextDocumentController(document);
+	};
 
 	workspace.registerTextDocumentContentProvider(EMBEDDED_LANGUAGE_SCHEMA, {
 		provideTextDocumentContent: uri => {
-
-
-			return embeddedFilesContent.get(uri.path);
+			return embeddedFilesContent.get(uriToString(uri));
 		}
 	});
-
+	// const config = workspace.getConfiguration();
+	// console.log("🚀 --> file: extension.ts:47 --> activate --> config:", config);
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{
@@ -54,89 +55,102 @@ export function activate(context: ExtensionContext) {
 			/** A glob pattern, like `*.{ts,js}`. */
 			// pattern: `*.{kts,kjs}`
 		}],
+
 		middleware: {
 			didOpen(document, next) {
-				const fileController = new DocumentHost(document, embeddedFilesContent);
-				fileContentControllerHosts.set(fileController.fileName, fileController);
-				next(document);
+				console.log("didOpen");
+				createTextDocumentController(document);
+				// console.log("🚀 --> file: extension.ts:70 --> didChange --> documentChangeEvent:", document.getText());
+
+				return next(document);
 			},
 			didChange(documentChangeEvent, next) {
-
-				const fileController = new DocumentHost(documentChangeEvent.document, embeddedFilesContent);
-				fileContentControllerHosts.set(fileController.fileName, fileController);
-				next(documentChangeEvent);
+				console.log("didChange");
+				createTextDocumentController(documentChangeEvent.document);
+				// console.log("🚀 --> file: extension.ts:70 --> didChange --> documentChangeEvent:", documentChangeEvent.document.getText());
+				return next(documentChangeEvent);
 			},
-			provideCompletionItem: async (document, position, context, token, next) => {
-				const originalUri = document.uri.toString(true);
-				const file: ts.SourceFile = ts.createSourceFile(
-					originalUri,
-					document.getText(),
-					ts.ScriptTarget.Latest,
-					false,
-					ts.ScriptKind.KTS
-				);
-
-				const offset = document.offsetAt(position);
-
-				const contentNode = findContentLocationNode(offset, file.kixStyleTagChildNodes);
-				if (contentNode !== undefined) {
-					const { content, uri } = createStyleTagContent(this, contentNode);
-
-					embeddedFilesContent.set(uri.path, content);
-
-					return commands.executeCommand<CompletionList>(
-						'vscode.executeCompletionItemProvider',
-						uri,
-						position,
-						context.triggerCharacter
-					);
-				}
-
-
-
-
-				const { uri, position: updatedPosition, textContent: updatedTextContent, areaController } = createScriptTagContent(
-					document,
-					position,
-					offset,
-					file.kixStyleTagChildNodes,
-					file.kixScriptTagChildNodes
-				);
-
-
-				embeddedFilesContent.set(uri.path, updatedTextContent);
-
-				const completionList = await commands.executeCommand<CompletionList>(
-					'vscode.executeCompletionItemProvider',
-					uri,
-					updatedPosition,
-					context.triggerCharacter
-				);
-
-
-				return {
-					items: completionList.items.map(item => {
-						const { range } = item;
-
-						if (range) {
-							if (range instanceof Range) {
-								item.range = areaController.updateRange(range);
-							} else {
-								const { inserting, replacing } = range;
-								range.inserting = areaController.updateRange(inserting);
-								range.replacing = areaController.updateRange(replacing);
-							}
-						}
-
-						return item;
-					}),
-					isIncomplete: completionList.isIncomplete
-				};
+			provideCompletionItem(document, position, context, token, next) {
+				console.log("provideCompletionItem");
+				const textDocumentController = getTextDocumentController(document);
+				// const list = await textDocumentController.getCompletionItems(position);
+				// console.log("🚀 --> file: extension.ts:73 --> provideCompletionItem: --> list:", list);
+				return textDocumentController.getCompletionItems(position, context.triggerCharacter);
 			},
-			provideHover: (document, position, token, next) => {
-				console.log("🚀 --> file: extension.ts:123 --> activate --> document:", document);
-				return null as any;
-			}
+			provideHover(document, position, token, next) {
+				console.log("provideHover");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideHover(position);
+			},
+			provideSignatureHelp(document, position, context, token, next) {
+				console.log("provideSignatureHelp");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideSignatureHelp(position, context.triggerCharacter);
+			},
+			provideDefinition(document, position, token, next) {
+				console.log("provideDefinition");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideDefinition(position);
+			},
+			provideTypeDefinition(document, position, token, next) {
+				console.log("provideTypeDefinition");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideTypeDefinition(position);
+
+			},
+			provideImplementation(document, position, token, next) {
+				console.log("provideImplementation");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideImplementation(position);
+			},
+			provideReferences(document, position, options, token, next) {
+				console.log("provideReferences");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideReferences(position);
+				// provideImplementation
+			},
+			provideDocumentHighlights(document, position, next) {
+				console.log("provideDocumentHighlights");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideDocumentHighlights(position);
+			},
+			provideCodeActions(document, range, context, token, next) {
+				console.log("provideCodeActions");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideCodeActions(range);
+			},
+			provideDocumentFormattingEdits: (document, options, token, next) => {
+				console.log("provideDocumentFormattingEdits");
+				// if (!config.features.format) {
+				// 	return [];
+				// }
+				return next(document, options, token);
+			},
+			// cursorMove(){
+
+			// }
+			// provideTypeHierarchys(document, position, next) {
+			// 	console.log("provideDocumentHighlights");
+			// 	const textDocumentController = getTextDocumentController(document);
+
+			// 	return textDocumentController.provideDocumentHighlights(position);
+			// },
+			// vscode.prepareTypeHierarchy
+			// provideDocumentSymbols(document, token, next) {
+			// 	console.log("provideDocumentSymbols");
+			// 	const textDocumentController = getTextDocumentController(document);
+
+			// 	return textDocumentController.provideDocumentSymbols(document);
+			// }
+			//  registerDocumentSymbolProvider
 		}
 	};
 

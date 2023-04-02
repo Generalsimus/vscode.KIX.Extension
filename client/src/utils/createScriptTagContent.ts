@@ -4,10 +4,10 @@ import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { makeScriptTagsSafe } from './makeScriptTagsSafe';
 import { getLineColumnFromTextPosition } from './getLineColumnFromTextPosition';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './helpers';
-import { DocumentHost } from '../host';
+import { TextDocumentController } from '../host';
 
 export const createScriptTagContent = ( 
-	host: DocumentHost,
+	host: TextDocumentController,
 	position: Position,
 	offset: number,
 ) => {

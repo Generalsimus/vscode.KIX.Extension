@@ -17,6 +17,16 @@
 	"activationEvents": [],
 	"main": "./client/out/extension",
 	"contributes": {
+		"capabilitiesuuu": {
+			"completionItemProvider": "true",
+			"hoverProvider": "true",
+			"signatureHelpProvider": "true",
+			"definitionProvider": "true",
+			"typeDefinitionProvider": "true",
+			"referenceProvider": "true",
+			"documentHighlights": "true",
+			"documentSymbolProvider": "true"
+		},
 		"languages": [
 			{
 				"id": "kix",

@@ -17,5 +17,8 @@
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.43.0"
+	},
+	"capabilities": {
+		"definitionProvider": "true"
 	}
 }
