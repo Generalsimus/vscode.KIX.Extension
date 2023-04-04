@@ -1,22 +1,80 @@
 
-import { CodeAction, Command, commands, CompletionList, Definition, DefinitionLink, DocumentHighlight, DocumentSymbol, ExtensionContext, Hover, Location, Position, Range, SignatureHelp, SymbolInformation, TextDocument, workspace } from 'vscode';
+import { CodeAction, Command, commands, CompletionList, Definition, DefinitionLink, DocumentHighlight, DocumentSymbol, ExtensionContext, Hover, Location, LocationLink, Position, Range, SignatureHelp, SymbolInformation, TextDocument, Uri, workspace } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { findContentLocationNode } from './utils/findContentLocationNode';
 import { createStyleTagContent } from '../utils/createStyleTagContent';
 import { createScriptTagContent } from '../utils/createScriptTagContent';
 import { uriToString } from './utils/uriToString';
+import { CreateContentAreaController } from '../utils/createContentAreaController';
+import { createPerfHook } from '../perf';
 
+const proxyRangeUpdate = <T extends Record<any, any>, A extends T | T[]>(
+	target: A,
+	positionDetails: ReturnType<TextDocumentController["getDocumentUpdateDocumentContentAtPositions"]>,
+	originalUri: Uri
+): A => {
+	if (Array.isArray(target)) {
+		return target.map(el => proxyRangeUpdate(el, positionDetails, originalUri)) as A;
+	}
+
+	if (typeof target !== "object") {
+		return target;
+	}
+	const state: Partial<T> = {};
+	return new Proxy(target, {
+		get(obj, prop, receiver) {
+			if (prop in state) {
+				return Reflect.get(state, prop);
+			}
+			const value = Reflect.get(obj, prop, receiver);
+
+			if (value instanceof Range) {
+				const updatedRange = positionDetails.areaController.updateRange(value);
+
+				Reflect.set(state, prop, updatedRange);
+
+				return updatedRange;
+			} else if (value instanceof Position) {
+				const updatedPosition = positionDetails.areaController.updatePosition(value);
+
+				Reflect.set(state, prop, updatedPosition);
+
+				return updatedPosition;
+			} else if (value instanceof Uri && uriToString(positionDetails.uri) === uriToString(originalUri)) {
+
+				Reflect.set(state, prop, originalUri);
+				return originalUri;
+			}
+
+			if (typeof value === "object") {
+				const proxyObject = proxyRangeUpdate(value, positionDetails, originalUri);
+				Reflect.set(state, prop, proxyObject);
+				return proxyObject;
+			}
+
+			return value;
+		},
+		set(obj, prop, value, receiver) {
+			if (value instanceof Position || value instanceof Uri || value instanceof Range) {
+				return Reflect.set(state, prop, value);
+			}
+			return Reflect.set(obj, prop, value, receiver);
+		}
+	});
+};
 export class TextDocumentController {
 	textdocument: TextDocument
 	fileName: string
 	textContent: string
 	sourceFile: ts.SourceFile
 	embeddedFilesMap: Map<string, string>
+	areaController: CreateContentAreaController
 	constructor(document: TextDocument, embeddedFilesMap: Map<string, string>) {
 		this.textdocument = document;
 		this.embeddedFilesMap = embeddedFilesMap;
 		this.fileName = document.uri.toString(true);
 		this.textContent = document.getText();
+		this.areaController = new CreateContentAreaController(this);
 		this.sourceFile = ts.createSourceFile(
 			this.fileName,
 			this.textContent,
@@ -34,6 +92,7 @@ export class TextDocumentController {
 				position,
 				offset,
 			);
+			this.embeddedFilesMap.set(uriToString(uri), textContent);
 			return {
 				uri,
 				textContent,
@@ -43,19 +102,20 @@ export class TextDocumentController {
 			} as const;
 		}
 
-		const { content, uri } = createStyleTagContent(this, styleContentNode);
+		const { textContent, uri } = createStyleTagContent(this, styleContentNode);
+
+		this.embeddedFilesMap.set(uriToString(uri), textContent);
 		return {
 			uri: uri,
-			textContent: content,
+			textContent: textContent,
 			position: position,
 			isStyle: true
 		} as const;
 	}
-	getCompletionItems(position: Position, triggerCharacter: string | undefined) {
+	getCompletionItems(position: Position, uri: Uri, triggerCharacter: string | undefined) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		// console.log("🚀 --> file: index.ts:56 --> TextDocumentController --> getCompletionItems --> positionDetails:", positionDetails.textContent);
 
-		this.embeddedFilesMap.set(uriToString(positionDetails.uri), positionDetails.textContent);
+		console.log("🚀 --> file: index.ts:120 --> TextDocumentController --> getCompletionItems --> positionDetails:", positionDetails.textContent);
 
 		if (positionDetails.isStyle) {
 			return commands.executeCommand<CompletionList>(
@@ -63,18 +123,23 @@ export class TextDocumentController {
 				positionDetails.uri,
 				positionDetails.position,
 				triggerCharacter
-			);
+			).then((completionList) => {
+				return proxyRangeUpdate(completionList, positionDetails, uri);
+			});
 		}
-
+		
 		return commands.executeCommand<CompletionList>(
 			'vscode.executeCompletionItemProvider',
 			positionDetails.uri,
 			positionDetails.position,
 			triggerCharacter
-		).then(({ items, isIncomplete }) => {
+		).then((completionList) => {
+			const comp = proxyRangeUpdate(completionList, positionDetails, uri);
+			// console.log("🚀 --> file: index.ts:137 --> TextDocumentController --> ).then --> comp:", comp.items.map(e => ({ ...e })));
+			// return comp;
 			const { areaController } = positionDetails;
 			return {
-				items: items.map(item => {
+				items: completionList.items.map(item => {
 					const { range } = item;
 					if (range) {
 						if (range instanceof Range) {
@@ -87,7 +152,7 @@ export class TextDocumentController {
 					}
 					return item;
 				}),
-				isIncomplete: isIncomplete
+				isIncomplete: completionList.isIncomplete
 			};
 		});
 
@@ -99,7 +164,7 @@ export class TextDocumentController {
 			positionDetails.uri,
 			positionDetails.position
 		);
-		console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideHover --> Hover:", Hover);
+		// console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideHover --> Hover:", Hover);
 		return Hover[0];
 	}
 	provideSignatureHelp(position: Position, triggerCharacter: string | undefined) {
@@ -110,19 +175,32 @@ export class TextDocumentController {
 			positionDetails.position,
 			triggerCharacter
 		);
-		console.log("🚀 --> file: index.ts:112 --> TextDocumentController --> provideSignatureHelp --> SignatureHelp:", SignatureHelp);
+		// console.log("🚀 --> file: index.ts:112 --> TextDocumentController --> provideSignatureHelp --> SignatureHelp:", SignatureHelp);
 		return SignatureHelp;
 	}
-	provideDefinition(position: Position) {
+	provideDefinition(position: Position, uri: Uri) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		const definition = commands.executeCommand<Definition | DefinitionLink[]>(
+		// const { areaController } = positionDetails;
+		// console.log("🚀 --> file: index.ts:118 --> TextDocumentController --> provideDefinition --> positionDetails:", positionDetails);
+
+		// console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", definition);
+		// რეინჯი განაახლე აქქქ
+
+		// const sss = loopEach(null as (Definition | DefinitionLink[]));
+		// const definitions = ;
+		// console.log("🚀 --> file: index.ts:180 --> TextDocumentController --> provideDefinition --> definitions:", definitions);
+		// if (areaController === undefined) {
+		// 	return 
+		// } 
+
+
+		return commands.executeCommand<Definition | DefinitionLink[]>(
 			'vscode.executeDefinitionProvider',
 			positionDetails.uri,
 			positionDetails.position,
-		);
-		console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", definition);
-		// რეინჯი განაახლე აქქქ
-		return definition;
+		).then(definitions => {
+			return proxyRangeUpdate(definitions, positionDetails, uri);
+		});
 	}
 	provideTypeDefinition(position: Position) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
@@ -131,7 +209,7 @@ export class TextDocumentController {
 			positionDetails.uri,
 			positionDetails.position,
 		);
-		console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", typeDefinition);
+		// console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", typeDefinition);
 		// რეინჯი განაახლე აქქქ
 		return typeDefinition;
 	}
@@ -142,7 +220,7 @@ export class TextDocumentController {
 			positionDetails.uri,
 			positionDetails.position,
 		);
-		console.log("🚀 --> file: index.ts:145 --> TextDocumentController --> provideImplementation --> implementation:", implementation);
+		// console.log("🚀 --> file: index.ts:145 --> TextDocumentController --> provideImplementation --> implementation:", implementation);
 		// რეინჯი განაახლე აქქქ
 		return implementation;
 	}
@@ -153,7 +231,7 @@ export class TextDocumentController {
 			positionDetails.uri,
 			positionDetails.position,
 		);
-		console.log("🚀 --> file: index.ts:155 --> TextDocumentController --> provideReferences --> references:", references);
+		// console.log("🚀 --> file: index.ts:155 --> TextDocumentController --> provideReferences --> references:", references);
 
 		// რეინჯი განაახლე აქქქ
 		return references;
@@ -165,7 +243,7 @@ export class TextDocumentController {
 			positionDetails.uri,
 			positionDetails.position,
 		);
-		console.log("🚀 --> file: index.ts:167 --> TextDocumentController --> provideDocumentHighlights --> documentHighlights:", documentHighlights);
+		// console.log("🚀 --> file: index.ts:167 --> TextDocumentController --> provideDocumentHighlights --> documentHighlights:", documentHighlights);
 
 		// რეინჯი განაახლე აქქქ
 		return documentHighlights;
@@ -176,7 +254,7 @@ export class TextDocumentController {
 			'vscode.executeDocumentSymbolProvider',
 			positionDetails.uri,
 		);
-		console.log("🚀 --> file: index.ts:178 --> TextDocumentController --> provideDocumentSymbols --> documentSymbols:", documentSymbols);
+		// console.log("🚀 --> file: index.ts:178 --> TextDocumentController --> provideDocumentSymbols --> documentSymbols:", documentSymbols);
 
 		// რეინჯი განაახლე აქქქ
 		return documentSymbols;

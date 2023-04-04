@@ -37,22 +37,23 @@ connection.onInitialize((_params: InitializeParams) => {
 			// Tell the client that the server supports code completion
 			completionProvider: {
 				resolveProvider: false
-			}
+			},
+			definitionProvider: true,
 		}
 	};
 });
 // connection.onInitialized((_params: InitializedParams) => {
 // 	console.log("🚀 --> onInitializedd", _params);
 // 	connection.sendRequest("INITIAL_workspaceFolders", _params);
-	// return {
-	// 	capabilities: {
-	// 		textDocumentSync: TextDocumentSyncKind.Full,
-	// 		// Tell the client that the server supports code completion
-	// 		completionProvider: {
-	// 			resolveProvider: false
-	// 		}
-	// 	}
-	// };
+// return {
+// 	capabilities: {
+// 		textDocumentSync: TextDocumentSyncKind.Full,
+// 		// Tell the client that the server supports code completion
+// 		completionProvider: {
+// 			resolveProvider: false
+// 		}
+// 	}
+// };
 // });
 
 

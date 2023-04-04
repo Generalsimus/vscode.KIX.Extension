@@ -7,14 +7,14 @@ import { EMBEDDED_LANGUAGE_SCHEMA } from './helpers';
 import { TextDocumentController } from '../host';
 
 export const createScriptTagContent = ( 
-	host: TextDocumentController,
+	documentController: TextDocumentController,
 	position: Position,
 	offset: number,
 ) => {
-	const originalUri = host.fileName;
-	const textContent = host.textContent;
-	const styleTagChildNodes = host.sourceFile.kixStyleTagChildNodes;
-	const scriptTagChildNodes = host.sourceFile.kixScriptTagChildNodes;
+	const originalUri = documentController.fileName;
+	const textContent = documentController.textContent;
+	const styleTagChildNodes = documentController.sourceFile.kixStyleTagChildNodes;
+	const scriptTagChildNodes = documentController.sourceFile.kixScriptTagChildNodes;
 	const safeTextContent = removeStyleTagUnsafeContent(textContent, styleTagChildNodes);
 
 	const isTypescriptFile = /(\.kts)$/gim.test(originalUri);
@@ -28,7 +28,7 @@ export const createScriptTagContent = (
 		textContent: updatedTextContent,
 		offset: updatedOffset,
 		areaController,
-	} = makeScriptTagsSafe(safeTextContent, offset, scriptTagChildNodes);
+	} = makeScriptTagsSafe(documentController,safeTextContent, offset  );
 
 	const { line, column } = getLineColumnFromTextPosition(updatedTextContent, updatedOffset);
 

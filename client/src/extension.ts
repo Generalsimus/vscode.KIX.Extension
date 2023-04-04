@@ -43,8 +43,6 @@ export function activate(context: ExtensionContext) {
 			return embeddedFilesContent.get(uriToString(uri));
 		}
 	});
-	// const config = workspace.getConfiguration();
-	// console.log("🚀 --> file: extension.ts:47 --> activate --> config:", config);
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{
@@ -55,102 +53,80 @@ export function activate(context: ExtensionContext) {
 			/** A glob pattern, like `*.{ts,js}`. */
 			// pattern: `*.{kts,kjs}`
 		}],
-
 		middleware: {
 			didOpen(document, next) {
 				console.log("didOpen");
 				createTextDocumentController(document);
-				// console.log("🚀 --> file: extension.ts:70 --> didChange --> documentChangeEvent:", document.getText());
+
 
 				return next(document);
 			},
 			didChange(documentChangeEvent, next) {
 				console.log("didChange");
 				createTextDocumentController(documentChangeEvent.document);
-				// console.log("🚀 --> file: extension.ts:70 --> didChange --> documentChangeEvent:", documentChangeEvent.document.getText());
+
 				return next(documentChangeEvent);
 			},
 			provideCompletionItem(document, position, context, token, next) {
 				console.log("provideCompletionItem");
 				const textDocumentController = getTextDocumentController(document);
-				// const list = await textDocumentController.getCompletionItems(position);
-				// console.log("🚀 --> file: extension.ts:73 --> provideCompletionItem: --> list:", list);
-				return textDocumentController.getCompletionItems(position, context.triggerCharacter);
-			},
-			provideHover(document, position, token, next) {
-				console.log("provideHover");
-				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideHover(position);
-			},
-			provideSignatureHelp(document, position, context, token, next) {
-				console.log("provideSignatureHelp");
-				const textDocumentController = getTextDocumentController(document);
-
-				return textDocumentController.provideSignatureHelp(position, context.triggerCharacter);
+				return textDocumentController.getCompletionItems(position,document.uri, context.triggerCharacter);
 			},
 			provideDefinition(document, position, token, next) {
 				console.log("provideDefinition");
 				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideDefinition(position);
+				return textDocumentController.provideDefinition(position,document.uri);
 			},
-			provideTypeDefinition(document, position, token, next) {
-				console.log("provideTypeDefinition");
-				const textDocumentController = getTextDocumentController(document);
+			// provideHover(document, position, token, next) {
+			// 	console.log("provideHover");
+			// 	const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideTypeDefinition(position);
+			// 	return textDocumentController.provideHover(position);
+			// },
+			// provideSignatureHelp(document, position, context, token, next) {
+			// 	console.log("provideSignatureHelp");
+			// 	const textDocumentController = getTextDocumentController(document);
 
-			},
-			provideImplementation(document, position, token, next) {
-				console.log("provideImplementation");
-				const textDocumentController = getTextDocumentController(document);
+			// 	return textDocumentController.provideSignatureHelp(position, context.triggerCharacter);
+			// },
+			// provideTypeDefinition(document, position, token, next) {
+			// 	console.log("provideTypeDefinition");
+			// 	const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideImplementation(position);
-			},
-			provideReferences(document, position, options, token, next) {
-				console.log("provideReferences");
-				const textDocumentController = getTextDocumentController(document);
+			// 	return textDocumentController.provideTypeDefinition(position);
 
-				return textDocumentController.provideReferences(position);
-				// provideImplementation
-			},
-			provideDocumentHighlights(document, position, next) {
-				console.log("provideDocumentHighlights");
-				const textDocumentController = getTextDocumentController(document);
+			// },
+			// provideImplementation(document, position, token, next) {
+			// 	console.log("provideImplementation");
+			// 	const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideDocumentHighlights(position);
-			},
-			provideCodeActions(document, range, context, token, next) {
-				console.log("provideCodeActions");
-				const textDocumentController = getTextDocumentController(document);
+			// 	return textDocumentController.provideImplementation(position);
+			// },
+			// provideReferences(document, position, options, token, next) {
+			// 	console.log("provideReferences");
+			// 	const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideCodeActions(range);
-			},
-			provideDocumentFormattingEdits: (document, options, token, next) => {
-				console.log("provideDocumentFormattingEdits");
-				// if (!config.features.format) {
-				// 	return [];
-				// }
-				return next(document, options, token);
-			},
-			// cursorMove(){
-
-			// }
-			// provideTypeHierarchys(document, position, next) {
+			// 	return textDocumentController.provideReferences(position);
+			// },
+			// provideDocumentHighlights(document, position, next) {
 			// 	console.log("provideDocumentHighlights");
 			// 	const textDocumentController = getTextDocumentController(document);
 
 			// 	return textDocumentController.provideDocumentHighlights(position);
 			// },
-			// vscode.prepareTypeHierarchy
-			// provideDocumentSymbols(document, token, next) {
-			// 	console.log("provideDocumentSymbols");
+			// provideCodeActions(document, range, context, token, next) {
+			// 	console.log("provideCodeActions");
 			// 	const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideDocumentSymbols(document);
-			// }
-			//  registerDocumentSymbolProvider
+			// 	return textDocumentController.provideCodeActions(range);
+			// },
+			// provideDocumentFormattingEdits: (document, options, token, next) => {
+			// 	console.log("provideDocumentFormattingEdits");
+			// 	return next(document, options, token);
+			// },
+
 		}
 	};
 

@@ -22,6 +22,6 @@ export const createStyleTagContent = (host: TextDocumentController, contentNode:
 		uri: Uri.parse(`${EMBEDDED_LANGUAGE_SCHEMA}://css/${encodeURIComponent(
 			originalUri
 		)}${contentNode.pos}.css`),
-		content: cssContent
+		textContent: cssContent
 	};
 };

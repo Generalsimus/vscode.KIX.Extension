@@ -1,65 +1,62 @@
 import { Position, Range } from 'vscode';
 import { getPositionFromTextLineColumn } from './getPositionFromTextLineColumn';
 import { getLineColumnFromTextPosition } from './getLineColumnFromTextPosition';
+import { TextDocumentController } from '../host';
 
-export const createContentAreaController = (content: string) => {
-	const plusSizePositions: [number, number][] = [];
-	const originalContent = content;
-	return {
-		get value() {
-			return content;
-		},
-		addContent(startContent: string, endContent: string, pos: number, end: number) {
-			const updatedPos = this.getUpdatedPosition(pos);
-			const updatedEnd = this.getUpdatedPosition(end);
+export class CreateContentAreaController { 
+	content: string
+	documentController:TextDocumentController
+	constructor(documentController:TextDocumentController) {
+		this.documentController = documentController;
+		this.content = documentController.textContent;
+	}
+	plusSizePositions: [number, number][] = []
+	addContent(startContent: string, endContent: string, pos: number, end: number) {
+		const updatedPos = this.getUpdatedPosition(pos);
+		const updatedEnd = this.getUpdatedPosition(end);
 
-			plusSizePositions.push(
-				[pos, startContent.length],
-				[end, endContent.length]
-			);
+		this.plusSizePositions.push(
+			[pos, startContent.length],
+			[end, endContent.length]
+		);
 
-			return content = (
-				content.slice(0, updatedPos) +
-				`${startContent}${content.slice(updatedPos, updatedEnd)}${endContent}` +
-				content.slice(updatedEnd, content.length)
-			);
-		},
-		getUpdatedPosition(position: number) {
-			let newPosition = position;
-			for (const [originalPos, addedSize] of plusSizePositions) {
-				if (position > originalPos) {
-					newPosition = newPosition + addedSize;
-				}
+		return this.content = (
+			this.content.slice(0, updatedPos) +
+			`${startContent}${this.content.slice(updatedPos, updatedEnd)}${endContent}` +
+			this.content.slice(updatedEnd, this.content.length)
+		);
+	}
+	getUpdatedPosition(position: number) {
+		let newPosition = position;
+		for (const [originalPos, addedSize] of this.plusSizePositions) {
+			if (position > originalPos) {
+				newPosition = newPosition + addedSize;
 			}
-			return newPosition;
-		},
-		getOriginalPosition(updatedContentPosition: number) {
-			let plusSize = 0;
-			for (const [originalPos, addedSize] of plusSizePositions) {
-				if (updatedContentPosition > (originalPos + plusSize + addedSize)) {
-					plusSize = plusSize + addedSize;
-				}
-			}
-			return updatedContentPosition - plusSize;
-		},
-		updateRange({ start, end }: Range) {
-			const originalStartOffset = this.getOriginalPosition(getPositionFromTextLineColumn(content, start.line, start.character));
-			const originalEndOffset = this.getOriginalPosition(getPositionFromTextLineColumn(content, end.line, end.character));
-
-			const updateStartLineColl = getLineColumnFromTextPosition(originalContent, originalStartOffset);
-			const updateEndLineColl = getLineColumnFromTextPosition(originalContent, originalEndOffset);
-
-
-			return new Range(
-				start.with(
-					updateStartLineColl.line,
-					updateStartLineColl.column,
-				),
-				end.with(
-					updateEndLineColl.line,
-					updateEndLineColl.column,
-				),
-			);
 		}
-	};
-};
+		return newPosition;
+	}
+	getOriginalPosition(updatedContentPosition: number) {
+		let plusSize = 0;
+		for (const [originalPos, addedSize] of this.plusSizePositions) {
+			if (updatedContentPosition > (originalPos + plusSize + addedSize)) {
+				plusSize = plusSize + addedSize;
+			}
+		}
+		return updatedContentPosition - plusSize;
+	}
+	updatePosition(position: Position) {
+		const originalPositionOffset = this.getOriginalPosition(getPositionFromTextLineColumn(this.content, position.line, position.character));
+
+		const updateStartLineColl = getLineColumnFromTextPosition(this.documentController.textContent, originalPositionOffset);
+		return position.with(
+			updateStartLineColl.line,
+			updateStartLineColl.column,
+		);
+	}
+	updateRange({ start, end }: Range) {
+		return new Range(
+			this.updatePosition(start),
+			this.updatePosition(end),
+		);
+	}
+} 
