@@ -3,7 +3,7 @@ import { removeStyleTagUnsafeContent } from './removeStyleTagUnsafeContent';
 import { makeScriptTagsSafe } from './makeScriptTagsSafe';
 import { TextDocumentController } from '..';
 import { getEmbedFileUri } from './getEmbedFileUri';
-import { CreateContentAreaController } from './createContentAreaController';
+import { ContentAreaController } from './contentAreaController';
 
 export const createScriptTagContent = (documentController: TextDocumentController) => {
 	const originalFileName = documentController.fileName;
@@ -21,9 +21,9 @@ export const createScriptTagContent = (documentController: TextDocumentControlle
 	const safeTextContent = removeStyleTagUnsafeContent(textContent, styleTagChildNodes);
 
 
-	const areaController = new CreateContentAreaController(documentController);
 
-	const updatedTextContent = makeScriptTagsSafe(areaController, scriptTagChildNodes, safeTextContent,);
+	const { areaController, textContent: updatedTextContent } = makeScriptTagsSafe(safeTextContent, scriptTagChildNodes);
+	// console.log("🚀 --> file: createScriptTagContent.ts:27 --> createScriptTagContent --> updatedTextContent:", updatedTextContent);
 
 	let uri: Uri | undefined;
 	const value = {

@@ -24,61 +24,52 @@ import { findContentLocationNode } from './utils/findContentLocationNode';
 import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
 import { uriToString } from './utils/uriToString';
-import { CreateContentAreaController } from './utils/createContentAreaController';
+import { ContentAreaController } from './utils/contentAreaController';
 import { createPerfHook } from '../perf';
 
+const createProxyRedirectValue = ({ uri, areaController }: embedFileContentFile, textDocumentController: TextDocumentController) => {
+	const redirect = (
+		value: any,
+	) => {
+		if (areaController) {
+			if (value instanceof Range) {
+				return areaController.updateOriginalRange(value);
+			} else if (value instanceof Position) {
+				return areaController.updateOriginalPosition(value);
+			}
+		}
+		if (
+			value instanceof Uri &&
+			uriToString(value) === uriToString(uri)
+		) {
+			return textDocumentController.textdocument.uri;
+		}
+	};
+	return redirect;
+};
 const proxyRedirectFile = <T extends Record<any, any>, A extends T | T[]>(
 	target: A,
-	positionDetails: embedFileContentFile,
-	originalUri: Uri
+	redirectValue: (obj: any) => any
 ): A => {
-	if (Array.isArray(target)) {
-		return target.map((el) => proxyRedirectFile(el, positionDetails, originalUri)) as A;
-	}
-
 	if (typeof target !== 'object') {
 		return target;
 	}
+
+	if (Array.isArray(target)) {
+		return target.map((el) => proxyRedirectFile(el, redirectValue)) as A;
+	}
+
 	const state: Partial<T> = {};
 	return new Proxy(target, {
 		get(obj, prop, receiver) {
-			console.log('🚀 --> file: index.ts:26 --> get --> prop:', obj, prop);
 			if (prop in state) {
 				return Reflect.get(state, prop);
 			}
 			const value = Reflect.get(obj, prop, receiver);
 
-			if (value instanceof Range) {
-				const updatedRange = positionDetails.areaController.updateRange(value);
-
-				console.log('🚀 --> file: index.ts:44 --> get --> Range:');
-				Reflect.set(state, prop, updatedRange);
-
-				return updatedRange;
-			} else if (value instanceof Position) {
-				const updatedPosition = positionDetails.areaController.updatePosition(value);
-
-				console.log('🚀 --> file: index.ts:44 --> get --> Position:');
-				Reflect.set(state, prop, updatedPosition);
-
-				return updatedPosition;
-			} else if (
-				value instanceof Uri &&
-				uriToString(positionDetails.uri) === uriToString(value)
-			) {
-				console.log('🚀 --> file: index.ts:44 --> get --> Uri:');
-
-				Reflect.set(state, prop, originalUri);
-				return originalUri;
-			}
-
-			if (typeof value === 'object') {
-				const proxyObject = proxyRedirectFile(value, positionDetails, originalUri);
-				Reflect.set(state, prop, proxyObject);
-				return proxyObject;
-			}
-
-			return value;
+			const updateValue = redirectValue(value) || proxyRedirectFile(value, redirectValue);
+			Reflect.set(state, prop, updateValue);
+			return updateValue;
 		},
 		set(obj, prop, value, receiver) {
 			return Reflect.set(state, prop, value);
@@ -89,7 +80,7 @@ interface embedFileContentFile {
 	endOfFileExt: string;
 	uri: Uri;
 	textContent: string;
-	areaController?: CreateContentAreaController;
+	areaController?: ContentAreaController | undefined;
 }
 export class TextDocumentController {
 	textdocument: TextDocument;
@@ -97,13 +88,12 @@ export class TextDocumentController {
 	textContent: string;
 	sourceFile: ts.SourceFile;
 	embeddedFilesMap: Map<string, string>;
-	// areaController: CreateContentAreaController
 	constructor(document: TextDocument, embeddedFilesMap: Map<string, string>) {
 		this.textdocument = document;
 		this.embeddedFilesMap = embeddedFilesMap;
 		this.fileName = document.uri.toString(true);
 		this.textContent = document.getText();
-		// this.areaController = new CreateContentAreaController(this);
+
 		this.sourceFile = ts.createSourceFile(
 			this.fileName,
 			this.textContent,
@@ -113,7 +103,7 @@ export class TextDocumentController {
 		);
 	}
 	embedFileEmitCache: Map<string, embedFileContentFile> = new Map();
-	getDocumentUpdateDocumentContentAtPositions(position: Position) {
+	getDocumentUpdateDocumentContentAtPositions(position: Position): embedFileContentFile {
 		const offset = this.textdocument.offsetAt(position);
 		const styleContentNode = findContentLocationNode(
 			offset,
@@ -121,96 +111,74 @@ export class TextDocumentController {
 		);
 		if (styleContentNode === undefined) {
 			const scriptTagContent = createScriptTagContent(this);
+			// console.log("🚀 --> file: --> areaController:", scriptTagContent.textContent);
 			this.embeddedFilesMap.set(uriToString(scriptTagContent.uri), scriptTagContent.textContent);
 			return scriptTagContent;
 		}
 
 		const styleTagContent = createStyleTagContent(this, styleContentNode);
 
+		// console.log("🚀 --> file: --> areaController:", styleTagContent.textContent);
 		this.embeddedFilesMap.set(uriToString(styleTagContent.uri), styleTagContent.textContent);
 		return styleTagContent;
 	}
 	getCompletionItems(position: Position, uri: Uri, triggerCharacter: string | undefined) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		const embedFileUri = positionDetails.uri;
-		const embedFileTextContent = positionDetails.textContent;
-		console.log(
-			'🚀 --> file: index.ts:120 --> TextDocumentController --> getCompletionItems --> positionDetails:',
-			positionDetails.textContent
-		);
+		const {
+			uri: embeddedUri,
+			areaController
+		} = positionDetails;
+		const embeddedPosition = areaController?.updatePosition(position) || position;
 
-		if (positionDetails.isStyle) {
-			return commands
-				.executeCommand<CompletionList>(
-					'vscode.executeCompletionItemProvider',
-					positionDetails.uri,
-					positionDetails.position,
-					triggerCharacter
-				)
-				.then((completionList) => {
-					return proxyRedirectFile(completionList, positionDetails, uri);
-				});
-		}
 
+
+		const redirectObject = createProxyRedirectValue(positionDetails, this);
 		return commands
 			.executeCommand<CompletionList>(
 				'vscode.executeCompletionItemProvider',
-				positionDetails.uri,
-				positionDetails.position,
+				embeddedUri,
+				embeddedPosition,
 				triggerCharacter
 			)
 			.then((completionList) => {
-				const comp = proxyRedirectFile(completionList, positionDetails, uri);
-				// console.log("🚀 --> file: index.ts:137 --> TextDocumentController --> ).then --> comp:", comp.items.map(e => ({ ...e })));
+				// console.log("🚀 --> file: --> completionList:", completionList.items);
+				const comp = proxyRedirectFile(completionList, redirectObject);
+				console.log("🚀 --> file: --> completionList:", comp);
 				return comp;
-				// const { areaController } = positionDetails;
-				// return {
-				// 	items: completionList.items.map(item => {
-				// 		const { range } = item;
-				// 		if (range) {
-				// 			if (range instanceof Range) {
-				// 				item.range = areaController.updateRange(range);
-				// 			} else {
-				// 				const { inserting, replacing } = range;
-				// 				range.inserting = areaController.updateRange(inserting);
-				// 				range.replacing = areaController.updateRange(replacing);
-				// 			}
-				// 		}
-				// 		return item;
-				// 	}),
-				// 	isIncomplete: completionList.isIncomplete
-				// };
 			});
 	}
 	provideDefinition(position: Position, uri: Uri) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		// console.log("🚀 --> file: index.ts:183 --> TextDocumentController --> provideDefinition --> positionDetails:", positionDetails.textContent);
-		// const { areaController } = positionDetails;
-		// console.log("🚀 --> file: index.ts:118 --> TextDocumentController --> provideDefinition --> positionDetails:", positionDetails);
+		const {
+			uri: embeddedUri,
+			areaController
+		} = positionDetails;
+		const embeddedPosition = areaController?.updatePosition(position) || position;
 
-		// console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", definition);
-		// რეინჯი განაახლე აქქქ
 
-		// const sss = loopEach(null as (Definition | DefinitionLink[]));
-		// const definitions = ;
-		// console.log("🚀 --> file: index.ts:180 --> TextDocumentController --> provideDefinition --> definitions:", definitions);
-		// if (areaController === undefined) {
-		// 	return
+
+		// if (areaController) {
+		// console.log("🚀 --> file: --> areaController:", areaController.content);
+		// 	embeddedPosition =;
 		// }
+		const redirectObject = createProxyRedirectValue(positionDetails, this);
+
 
 		return commands
 			.executeCommand<Definition | DefinitionLink[]>(
 				'vscode.executeDefinitionProvider',
-				positionDetails.uri,
-				positionDetails.position
-			)
-			.then((definitions) => {
-				console.log(
-					'🚀 --> file: index.ts:186 --> TextDocumentController --> provideDefinition --> definitions:',
-					definitions
-				);
-				return proxyRedirectFile(definitions, positionDetails, uri);
+				embeddedUri,
+				embeddedPosition
+			).then((definition) => {
+				return proxyRedirectFile(definition, redirectObject);
 			});
+		// .then((definitions) => {
+		// 	console.log(
+		// 		'🚀 --> file: index.ts:186 --> TextDocumentController --> provideDefinition --> definitions:',
+		// 		definitions
+		// 	);
+		// 	return proxyRedirectFile(definitions,);
+		// });
 	}
 	// provideHover(position: Position) {
 	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);

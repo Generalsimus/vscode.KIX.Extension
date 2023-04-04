@@ -23,9 +23,12 @@ export const createStyleTagContent = (documentController: TextDocumentController
 			lastPos = child.end;
 		}
 	}
+	let uri: Uri | undefined;
 	const value = {
 		endOfFileExt: endOfFileExt,
-		uri: getEmbedFileUri(originalFileName, "css", endOfFileExt),
+		get uri() {
+			return uri ||= getEmbedFileUri(originalFileName, "css", endOfFileExt);
+		},
 		textContent: cssContent
 	};
 	documentController.embedFileEmitCache.set(endOfFileExt, value);

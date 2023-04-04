@@ -1,11 +1,11 @@
 import ts from '../../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-import { CreateContentAreaController } from './createContentAreaController';
+import { ContentAreaController } from './contentAreaController';
 
 export const makeScriptTagsSafe = (
-	areaController: CreateContentAreaController,
-	scriptTagChildNodes: ts.JsxElement[],
-	textContent: string
+	textContent: string,
+	scriptTagChildNodes: ts.JsxElement[]
 ) => {
+	const areaController = new ContentAreaController(textContent);
 	areaController.addContent(`<div>\n`, `\n</div>`, 0, textContent.length);
 
 	for (const scriptTaNode of scriptTagChildNodes) {
@@ -14,5 +14,9 @@ export const makeScriptTagsSafe = (
 
 		areaController.addContent(`{()=>{\n`, `\n}}`, pos, end);
 	}
-	return textContent;
+
+	return {
+		areaController,
+		textContent: areaController.content
+	};
 };

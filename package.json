@@ -1,14 +1,14 @@
 {
 	"name": "kix-embedded-language-service",
-	"description": "A language server example using language services to support embedded languages",
-	"author": "Microsoft Corporation",
+	"description": "kix",
+	"author": "soso tsertsvadze",
 	"license": "MIT",
 	"version": "1.0.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Microsoft/vscode-extension-samples"
 	},
-	"publisher": "vscode-samples",
+	"publisher": "Generalsimus",
 	"categories": [],
 	"keywords": [],
 	"engines": {
@@ -17,16 +17,6 @@
 	"activationEvents": [],
 	"main": "./client/out/extension",
 	"contributes": {
-		"capabilitiesuuu": {
-			"completionItemProvider": "true",
-			"hoverProvider": "true",
-			"signatureHelpProvider": "true",
-			"definitionProvider": "true",
-			"typeDefinitionProvider": "true",
-			"referenceProvider": "true",
-			"documentHighlights": "true",
-			"documentSymbolProvider": "true"
-		},
 		"languages": [
 			{
 				"id": "kix",
