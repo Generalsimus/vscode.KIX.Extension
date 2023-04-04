@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { ExtensionContext, TextDocument, workspace } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
-import { EMBEDDED_LANGUAGE_SCHEMA } from './utils/helpers';
+import { EMBEDDED_LANGUAGE_SCHEMA } from './host/utils/helpers';
 import { TextDocumentController } from './host';
 import { uriToString } from './host/utils/uriToString';
 

@@ -1,7 +1,7 @@
 import { Position, Range } from 'vscode';
 import { getPositionFromTextLineColumn } from './getPositionFromTextLineColumn';
 import { getLineColumnFromTextPosition } from './getLineColumnFromTextPosition';
-import { TextDocumentController } from '../host';
+import { TextDocumentController } from '..';
 
 export class CreateContentAreaController { 
 	content: string
