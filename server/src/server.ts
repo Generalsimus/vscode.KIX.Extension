@@ -39,6 +39,7 @@ connection.onInitialize((_params: InitializeParams) => {
 				resolveProvider: false
 			},
 			definitionProvider: true,
+			hoverProvider: true
 		}
 	};
 });

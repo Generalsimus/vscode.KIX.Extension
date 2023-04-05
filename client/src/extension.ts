@@ -35,11 +35,13 @@ export function activate(context: ExtensionContext) {
 		return documentController;
 	};
 	const getTextDocumentController = (document: TextDocument) => {
+		// const urrr = 
 		return fileContentControllerHosts.get(uriToString(document.uri)) || createTextDocumentController(document);
 	};
 
 	workspace.registerTextDocumentContentProvider(EMBEDDED_LANGUAGE_SCHEMA, {
 		provideTextDocumentContent: uri => {
+			// console.log("🚀 --> file: extension.ts:44 --> activate --> uri:", uri,embeddedFilesContent.get(uriToString(uri)));
 			return embeddedFilesContent.get(uriToString(uri));
 		}
 	});

@@ -9,7 +9,7 @@ export const createScriptTagContent = (documentController: TextDocumentControlle
 	const originalFileName = documentController.fileName;
 	const isTypescriptFile = /(\.kts)$/gim.test(originalFileName);
 	const filetype = isTypescriptFile ? 'tsx' : 'jsx';
-	const endOfFileExt = `.${filetype}`;
+	const endOfFileExt = `${filetype}`;
 	const cached = documentController.embedFileEmitCache.get(endOfFileExt);
 	if (cached) {
 		return cached;
@@ -23,7 +23,7 @@ export const createScriptTagContent = (documentController: TextDocumentControlle
 
 
 	const { areaController, textContent: updatedTextContent } = makeScriptTagsSafe(safeTextContent, scriptTagChildNodes);
-	// console.log("🚀 --> file: createScriptTagContent.ts:27 --> createScriptTagContent --> updatedTextContent:", updatedTextContent);
+
 
 	let uri: Uri | undefined;
 	const value = {
