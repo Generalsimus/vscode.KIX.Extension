@@ -81,12 +81,12 @@ export function activate(context: ExtensionContext) {
 
 				return textDocumentController.provideDefinition(position,document.uri);
 			},
-			// provideHover(document, position, token, next) {
-			// 	console.log("provideHover");
-			// 	const textDocumentController = getTextDocumentController(document);
+			provideHover(document, position, token, next) {
+				console.log("provideHover");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideHover(position);
-			// },
+				return textDocumentController.provideHover(position);
+			},
 			// provideSignatureHelp(document, position, context, token, next) {
 			// 	console.log("provideSignatureHelp");
 			// 	const textDocumentController = getTextDocumentController(document);

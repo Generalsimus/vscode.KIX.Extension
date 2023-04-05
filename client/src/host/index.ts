@@ -1,23 +1,12 @@
 import {
-	CodeAction,
-	Command,
 	commands,
 	CompletionList,
 	Definition,
 	DefinitionLink,
-	DocumentHighlight,
-	DocumentSymbol,
-	ExtensionContext,
 	Hover,
-	Location,
-	LocationLink,
 	Position,
-	Range,
-	SignatureHelp,
-	SymbolInformation,
 	TextDocument,
 	Uri,
-	workspace,
 } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { findContentLocationNode } from './utils/findContentLocationNode';
@@ -25,56 +14,10 @@ import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
 import { uriToString } from './utils/uriToString';
 import { ContentAreaController } from './utils/contentAreaController';
-import { createPerfHook } from '../perf';
+import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbbedFile';
+import { getCompletionItems } from './getCompletionItems';
+import { provideDefinition } from './provideDefinition';
 
-const createProxyRedirectValue = ({ uri, areaController }: embedFileContentFile, textDocumentController: TextDocumentController) => {
-	const redirect = (
-		value: any,
-	) => {
-		if (areaController) {
-			if (value instanceof Range) {
-				return areaController.updateOriginalRange(value);
-			} else if (value instanceof Position) {
-				return areaController.updateOriginalPosition(value);
-			}
-		}
-		if (value instanceof Uri) {
-			return textDocumentController.textdocument.uri;
-
-		}
-	};
-	return redirect;
-};
-const proxyRedirectFile = <T extends Record<any, any>, A extends T | T[]>(
-	target: A,
-	redirectValue: (obj: any) => any,
-	testIfCanRedirect: (obj: Record<any, any>) => boolean
-): A => {
-	if (Array.isArray(target)) {
-		return target.map((el) => proxyRedirectFile(el, redirectValue, testIfCanRedirect)) as A;
-	}
-
-	if (typeof target !== 'object' || testIfCanRedirect(target) === false) {
-		return target;
-	}
-
-	const state: Partial<T> = {};
-	return new Proxy(target, {
-		get(obj, prop, receiver) {
-			if (prop in state) {
-				return Reflect.get(state, prop);
-			}
-			const value = Reflect.get(obj, prop, receiver);
-
-			const updateValue = redirectValue(value) || proxyRedirectFile(value, redirectValue, testIfCanRedirect);
-			Reflect.set(state, prop, updateValue);
-			return updateValue;
-		},
-		set(obj, prop, value, receiver) {
-			return Reflect.set(state, prop, value);
-		},
-	});
-};
 interface embedFileContentFile {
 	endOfFileExt: string;
 	uri: Uri;
@@ -116,65 +59,14 @@ export class TextDocumentController {
 		}
 
 		const styleTagContent = createStyleTagContent(this, styleContentNode);
+		console.log("🚀 --> file: --> styleTagContent:", styleTagContent.textContent);
 
 
 		this.embeddedFilesMap.set(uriToString(styleTagContent.uri), styleTagContent.textContent);
 		return styleTagContent;
 	}
-	getCompletionItems(position: Position, uri: Uri, triggerCharacter: string | undefined) {
-		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		const {
-			uri: embeddedUri,
-			areaController
-		} = positionDetails;
-		const embeddedPosition = areaController?.updatePosition(position) || position;
-
-
-
-		const redirectObject = createProxyRedirectValue(positionDetails, this);
-		const testIfCanRedirect = () => true;
-
-		return commands
-			.executeCommand<CompletionList>(
-				'vscode.executeCompletionItemProvider',
-				embeddedUri,
-				embeddedPosition,
-				triggerCharacter
-			)
-			.then((completionList) => {
-				return {
-					items: proxyRedirectFile(completionList.items, redirectObject, testIfCanRedirect),
-					isIncomplete: completionList.isIncomplete
-				};
-			});
-	}
-	provideDefinition(position: Position, uri: Uri) {
-		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		const {
-			uri: embeddedUri,
-			areaController
-		} = positionDetails;
-		const embeddedPosition = areaController?.updatePosition(position) || position;
-
-
-
-
-		const redirectObject = createProxyRedirectValue(positionDetails, this);
-		const testIfCanRedirect = (obj: Record<any, any>) => {
-			const uriProp = obj["targetUri"] || obj["uri"];
-			return uriProp instanceof Uri && uriToString(uriProp) === uriToString(embeddedUri);
-		};
-
-
-		return commands
-			.executeCommand<Definition | DefinitionLink[]>(
-				'vscode.executeDefinitionProvider',
-				embeddedUri,
-				embeddedPosition
-			).then((definition) => {
-				return proxyRedirectFile(definition, redirectObject, testIfCanRedirect);
-			});
-	}
+	getCompletionItems = getCompletionItems
+	provideDefinition = provideDefinition
 	provideHover(position: Position) {
 		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 		const {
@@ -185,17 +77,48 @@ export class TextDocumentController {
 
 
 
-		const redirectObject = createProxyRedirectValue(positionDetails, this);
-		const testIfCanRedirect = () => true;
+		const redirectObject = createProxyRedirectValue(this, areaController);
+		const testIfCanRedirect = (obj: Record<any, any>) => {
+			const uriProp = obj["baseUri"];
+			// if (uriProp instanceof Uri) {
+			// 	// console.log("🚀 --> file: --> uriProp:", uriProp, uriToString(uriProp) === uriToString(embeddedUri));
+			// 	return uriToString(uriProp) === uriToString(embeddedUri);
+			// 	// return true;
+			// }
+			return true;
+
+		};
 
 		return commands.executeCommand<Hover[]>(
 			'vscode.executeHoverProvider',
-			positionDetails.uri,
+			embeddedUri,
 			embeddedPosition
 		).then((hovered) => {
-			console.log("🚀 --> file: index.ts:196 --> TextDocumentController --> ).then --> hovered:", hovered);
-			
-			return proxyRedirectFile(hovered[0], redirectObject, testIfCanRedirect);
+			const hover = hovered[0];
+			if (hover) {
+				try {
+					const ppxxxi = proxyRedirectEmbedFile(hover, redirectObject, testIfCanRedirect);
+					console.log("🚀 --> file: index.ts:216 --> TextDocumentController --> ).then --> hover:", hover);
+					// console.log("1:",positionDetails.textContent.split("\n")[hover.range.start.line].slice(hover.range.start.character-10,hover.range.start.character));
+					// console.log("2:",this.textContent.split("\n")[ppxxxi.range.start.line].slice(ppxxxi.range.start.character-10,ppxxxi.range.start.character));
+					// console.log("🚀 --> file: index.ts:212 --> TextDocumentController --> ).then --> hover1:", hover);
+					// console.log("🚀 --> file: index.ts:212 --> TextDocumentController --> ).then --> hover2:", {
+					// 	...proxyRedirectFile(hover, redirectObject, testIfCanRedirect)
+					// });
+					// return hover;
+
+					return ppxxxi;
+					return {
+						...hover,
+						contents: hover.contents.map(e => proxyRedirectEmbedFile(e as any, redirectObject, testIfCanRedirect)),
+						range: hover.range
+					};
+				} catch (error) {
+					console.log("🚀 --> file: --> error:", error);
+
+				}
+
+			}
 		});
 	}
 	// provideSignatureHelp(position: Position, triggerCharacter: string | undefined) {
