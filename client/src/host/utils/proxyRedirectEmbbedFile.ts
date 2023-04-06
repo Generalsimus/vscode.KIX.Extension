@@ -11,10 +11,10 @@ export const proxyRedirectEmbedFile = <T extends Record<any, any>, A extends T |
 		return target.map((el) => proxyRedirectEmbedFile(el, redirectValue, testIfCanRedirect)) as A;
 	}
 
-	if (typeof target !== 'object') {
+	if (typeof target !== 'object' || testIfCanRedirect(target) === false) {
 		return target;
 	}
-	const ifCanRedirect = testIfCanRedirect(target);
+	// const ifCanRedirect = testIfCanRedirect(target);
 
 	const state: Partial<T> = {};
 	return new Proxy(target, {
@@ -25,7 +25,7 @@ export const proxyRedirectEmbedFile = <T extends Record<any, any>, A extends T |
 			}
 			const value = Reflect.get(obj, prop, receiver);
 
-			const updateValue = (ifCanRedirect && redirectValue(value)) || proxyRedirectEmbedFile(value, redirectValue, testIfCanRedirect);
+			const updateValue = redirectValue(value) || proxyRedirectEmbedFile(value, redirectValue, testIfCanRedirect);
 			Reflect.set(state, prop, updateValue);
 			return updateValue;
 		},

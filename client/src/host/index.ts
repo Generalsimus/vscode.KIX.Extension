@@ -80,11 +80,11 @@ export class TextDocumentController {
 		const redirectObject = createProxyRedirectValue(this, areaController);
 		const testIfCanRedirect = (obj: Record<any, any>) => {
 			const uriProp = obj["baseUri"];
-			// if (uriProp instanceof Uri) {
-			// 	// console.log("🚀 --> file: --> uriProp:", uriProp, uriToString(uriProp) === uriToString(embeddedUri));
-			// 	return uriToString(uriProp) === uriToString(embeddedUri);
-			// 	// return true;
-			// }
+			if (uriProp instanceof Uri) {
+				// console.log("🚀 --> file: --> uriProp:", uriProp, uriToString(uriProp) === uriToString(embeddedUri));
+				return uriToString(uriProp) === uriToString(embeddedUri);
+				// return true;
+			}
 			return true;
 
 		};
