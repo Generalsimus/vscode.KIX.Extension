@@ -35,7 +35,7 @@ export function activate(context: ExtensionContext) {
 		return documentController;
 	};
 	const getTextDocumentController = (document: TextDocument) => {
-		// const urrr = 
+
 		return fileContentControllerHosts.get(uriToString(document.uri)) || createTextDocumentController(document);
 	};
 
@@ -73,13 +73,13 @@ export function activate(context: ExtensionContext) {
 				console.log("provideCompletionItem");
 				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.getCompletionItems(position,document.uri, context.triggerCharacter);
+				return textDocumentController.getCompletionItems(position, document.uri, context.triggerCharacter);
 			},
 			provideDefinition(document, position, token, next) {
 				console.log("provideDefinition");
 				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideDefinition(position,document.uri);
+				return textDocumentController.provideDefinition(position, document.uri);
 			},
 			provideHover(document, position, token, next) {
 				console.log("provideHover");

@@ -98,6 +98,7 @@ export class TextDocumentController {
 			if (hover) {
 				try {
 					const ppxxxi = proxyRedirectEmbedFile(hover, redirectObject, testIfCanRedirect);
+					// hover.contents = undefined;
 					console.log("🚀 --> file: index.ts:216 --> TextDocumentController --> ).then --> hover:", hover);
 					// console.log("1:",positionDetails.textContent.split("\n")[hover.range.start.line].slice(hover.range.start.character-10,hover.range.start.character));
 					// console.log("2:",this.textContent.split("\n")[ppxxxi.range.start.line].slice(ppxxxi.range.start.character-10,ppxxxi.range.start.character));
