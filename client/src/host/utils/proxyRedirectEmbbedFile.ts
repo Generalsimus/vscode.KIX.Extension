@@ -7,61 +7,73 @@ export const proxyRedirectEmbedFile = <T extends Record<any, any>, A extends T |
 	redirectValue: (obj: any) => any,
 	testIfCanRedirect: (obj: Record<any, any>) => boolean
 ): A => {
+	if (typeof target !== 'object') {
+		return target;
+	}
+	// else if (testIfCanRedirect(target) === false) {
+	// 	return proxyRedirectEmbedFile(target, redirectValue, testIfCanRedirect);
+	// }
 	if (target instanceof Array) {
 		return target.map((el) => proxyRedirectEmbedFile(el, redirectValue, testIfCanRedirect)) as A;
 	}
 
-	if (typeof target !== 'object' || testIfCanRedirect(target) === false) {
-		return target;
-	}
+
 	// const ifCanRedirect = testIfCanRedirect(target
 
 	const state: Partial<T> = {};
 	return new Proxy(target, {
 		get(obj, prop, receiver) {
 			// console.log("🚀 --> prop:", obj, prop);
-			if (prop in state) {
+			// return  Reflect.get(obj, prop, receiver);
+			if (Object.prototype.hasOwnProperty.call(state, prop)) {
 				const ret = Reflect.get(state, prop);
-				console.log(
-					"🚀 --> prop1:",
-					obj,
-					prop,
-					ret,
-					state,
-					prop in state,
-					Object.prototype.hasOwnProperty.call(state, prop)
-				);
+				// console.log(
+				// 	"🚀 --> prop1:",
+				// 	obj,
+				// 	prop,
+				// 	ret,
+				// 	state,
+				// 	prop in state,
+				// 	Object.prototype.hasOwnProperty.call(state, prop)
+				// );
 				return ret;
 			}
 			const value = Reflect.get(obj, prop, receiver);
 
-			const updateValue = redirectValue(value) || proxyRedirectEmbedFile(value, redirectValue, testIfCanRedirect);
-
-			try {
-				console.log(
-					"🚀 --> prop2:",
-					obj,
-					prop,
-					updateValue,
-					state,
-					prop in state,
-					Object.prototype.hasOwnProperty.call(state, prop)
-				);
-			} catch (e: any) { 
-				console.log("🚀 --> e:", e);
-				
+			// if (typeof value === 'object') {
+			// 	const updateValue = testIfCanRedirect(value) ? redirectValue(value) : proxyRedirectEmbedFile(value, redirectValue, testIfCanRedirect);
+			// 	Reflect.set(state, prop, updateValue);
+			// 	return updateValue;
+			// }
+			// console.log(
+			// 	"🚀 --> prop1:",
+			// 	obj,
+			// 	prop,
+			// 	{ value, obj, rrr: (obj as any)?.toJSON},
+			// 	state,
+			// 	prop in state,
+			// 	Object.prototype.hasOwnProperty.call(state, prop)
+			// );
+			if (typeof value === 'object') {
+				const updateValue = proxyRedirectEmbedFile(value, redirectValue, testIfCanRedirect);
+				// redirectValue(value) || 
+				// redirectValue(value) || 
+				Reflect.set(state, prop, updateValue);
+				return updateValue;
 			}
+			return value;
 
-			Reflect.set(state, prop, updateValue);
-			return updateValue;
+			return value;
 		},
 		set(obj, prop, value, receiver) {
+			// console.log("🚀 --> file: proxyRedirect/EmbbedFile.ts:67 --> set --> prop:", prop);
+			// return Reflect.set(obj, prop, value,receiver);
 			return Reflect.set(state, prop, value);
 		},
 	});
 };
 
-export const createProxyRedirectValue = (textDocumentController: TextDocumentController, areaController?: ContentAreaController) => {
+export const createProxyRedirectValue = (textDocumentController: TextDocumentController, areaController: ContentAreaController | undefined) => {
 	const redirect = (
 		value: any,
 	) => {
@@ -74,8 +86,8 @@ export const createProxyRedirectValue = (textDocumentController: TextDocumentCon
 		}
 		if (value instanceof Uri) {
 			return textDocumentController.textdocument.uri;
-
 		}
+		return value;
 	};
 	return redirect;
 }; 
