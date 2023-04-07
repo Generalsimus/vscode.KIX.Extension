@@ -4,6 +4,7 @@ import {
 	Definition,
 	DefinitionLink,
 	Hover,
+	MarkdownString,
 	Position,
 	TextDocument,
 	Uri,
@@ -99,10 +100,15 @@ export class TextDocumentController {
 				try {
 					const ppxxxi = proxyRedirectEmbedFile(hover, redirectObject, testIfCanRedirect);
 					// hover.contents = undefined;
-					console.log(
-						"🚀 --> file: --> hover:", 
-						ppxxxi.contents[0]
-					);
+					// const tttt = new MarkdownString();
+					// tttt.
+					// console.log(
+					// 	"🚀 --> file: --> hover:",
+					// 	{...(hover as any).contents[1]},
+					// 	{...(ppxxxi as any).contents[1]},
+					// 	"SSS",
+					// 	ppxxxi.contents[1] instanceof MarkdownString
+					// );
 					// console.log("1:",positionDetails.textContent.split("\n")[hover.range.start.line].slice(hover.range.start.character-10,hover.range.start.character));
 					// console.log("2:",this.textContent.split("\n")[ppxxxi.range.start.line].slice(ppxxxi.range.start.character-10,ppxxxi.range.start.character));
 					// console.log("🚀 --> file: index.ts:212 --> TextDocumentController --> ).then --> hover1:", hover);
@@ -215,4 +221,3 @@ export class TextDocumentController {
 	// 	// return result?.filter(codeAction => codeAction.title.indexOf('__VLS_') === -1);
 	// }
 }
- 
