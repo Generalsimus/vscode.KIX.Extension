@@ -1,5 +1,5 @@
 import { CompletionList, Position, Uri, commands } from 'vscode';
-import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbbedFile';
+import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 
 export function getCompletionItems(position: Position, uri: Uri, triggerCharacter: string | undefined) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);

@@ -87,47 +87,56 @@ export function activate(context: ExtensionContext) {
 
 				return textDocumentController.provideHover(position);
 			},
-			// provideSignatureHelp(document, position, context, token, next) {
-			// 	console.log("provideSignatureHelp");
-			// 	const textDocumentController = getTextDocumentController(document);
+			provideSignatureHelp(document, position, context, token, next) {
+				console.log("provideSignatureHelp");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideSignatureHelp(position, context.triggerCharacter);
-			// },
-			// provideTypeDefinition(document, position, token, next) {
-			// 	console.log("provideTypeDefinition");
-			// 	const textDocumentController = getTextDocumentController(document);
+				return textDocumentController.provideSignatureHelp(position, context.triggerCharacter);
+			},
+			provideTypeDefinition(document, position, token, next) {
+				console.log("provideTypeDefinition");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideTypeDefinition(position);
+				return textDocumentController.provideTypeDefinition(position);
 
-			// },
-			// provideImplementation(document, position, token, next) {
-			// 	console.log("provideImplementation");
-			// 	const textDocumentController = getTextDocumentController(document);
+			},
+			provideImplementation(document, position, token, next) {
+				console.log("provideImplementation");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideImplementation(position);
-			// },
-			// provideReferences(document, position, options, token, next) {
-			// 	console.log("provideReferences");
-			// 	const textDocumentController = getTextDocumentController(document);
+				return textDocumentController.provideImplementation(position);
+			},
+			provideReferences(document, position, options, token, next) {
+				console.log("provideReferences");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideReferences(position);
-			// },
-			// provideDocumentHighlights(document, position, next) {
-			// 	console.log("provideDocumentHighlights");
-			// 	const textDocumentController = getTextDocumentController(document);
+				return textDocumentController.provideReferences(position);
+			},
+			provideDocumentHighlights(document, position, next) {
+				console.log("provideDocumentHighlights");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideDocumentHighlights(position);
-			// },
-			// provideCodeActions(document, range, context, token, next) {
-			// 	console.log("provideCodeActions");
-			// 	const textDocumentController = getTextDocumentController(document);
+				return textDocumentController.provideDocumentHighlights(position);
+			},
+			provideCodeActions(document, range, context, token, next) {
+				console.log("provideCodeActions");
+				const textDocumentController = getTextDocumentController(document);
 
-			// 	return textDocumentController.provideCodeActions(range);
-			// },
-			// provideDocumentFormattingEdits: (document, options, token, next) => {
-			// 	console.log("provideDocumentFormattingEdits");
-			// 	return next(document, options, token);
-			// },
+				return textDocumentController.provideCodeActions(range);
+			},
+			provideCodeLenses(document, token, next) {
+				console.log("provideCodeLenses");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideCodeLenses();
+			}
+			// console.log("provideCodeActions");
+			// const textDocumentController = getTextDocumentController(document);
+
+			// return textDocumentController.provideCodeActions(range);
+			// }, 
+			// provideCodeLenses?: (this: void, document: TextDocument, token: CancellationToken, next: ProvideCodeLensesSignature) => ProviderResult<VCodeLens[]>;
+		
 
 		}
 	};

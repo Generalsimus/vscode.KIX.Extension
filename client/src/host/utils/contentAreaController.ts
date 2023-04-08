@@ -1,7 +1,6 @@
 import { Position, Range } from 'vscode';
 import { getPositionFromTextLineColumn } from './getPositionFromTextLineColumn';
 import { getLineColumnFromTextPosition } from './getLineColumnFromTextPosition';
-import { TextDocumentController } from '..';
 
 export class ContentAreaController {
 	content: string
@@ -11,14 +10,23 @@ export class ContentAreaController {
 		this.content = textContent;
 	}
 	plusSizePositions: [number, number][] = []
+	addPlusSize(offset: number, size: number) {
+		let index = 0;
+		for (const [offsetPos] of this.plusSizePositions) {
+			if (offsetPos < offset) {
+				index++;
+			}
+
+		}
+		this.plusSizePositions.splice(index, 0, [offset, size]);
+	}
 	addContent(startContent: string, endContent: string, pos: number, end: number) {
 		const updatedPos = this.getUpdatedOffset(pos);
 		const updatedEnd = this.getUpdatedOffset(end);
 
-		this.plusSizePositions.push(
-			[pos, startContent.length],
-			[end, endContent.length]
-		);
+		this.addPlusSize(pos, startContent.length);
+		this.addPlusSize(end, endContent.length);
+
 
 		return this.content = (
 			this.content.slice(0, updatedPos) +
@@ -39,9 +47,16 @@ export class ContentAreaController {
 		const updatedPositionOffset = this.getUpdatedOffset(getPositionFromTextLineColumn(this.originalContent, originalCodePosition.line, originalCodePosition.character));
 
 		const updateStartLineColl = getLineColumnFromTextPosition(this.content, updatedPositionOffset);
+
 		return originalCodePosition.with(
 			updateStartLineColl.line,
 			updateStartLineColl.column,
+		);
+	}
+	updateRange({ start, end }: Range) {
+		return new Range(
+			this.updatePosition(start),
+			this.updatePosition(end),
 		);
 	}
 	getOriginalOffset(updatedOffset: number) {
@@ -54,9 +69,11 @@ export class ContentAreaController {
 		return updatedOffset - plusSize;
 	}
 	updateOriginalPosition(updatedCodePosition: Position) {
-		const originalPositionOffset = this.getOriginalOffset(getPositionFromTextLineColumn(this.content, updatedCodePosition.line, updatedCodePosition.character));
+		const updatedOffset = getPositionFromTextLineColumn(this.content, updatedCodePosition.line, updatedCodePosition.character);
+		const originalPositionOffset = this.getOriginalOffset(updatedOffset);
 
 		const updateStartLineColl = getLineColumnFromTextPosition(this.originalContent, originalPositionOffset);
+
 		return updatedCodePosition.with(
 			updateStartLineColl.line,
 			updateStartLineColl.column,

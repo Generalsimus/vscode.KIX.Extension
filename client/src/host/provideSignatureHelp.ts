@@ -1,8 +1,8 @@
-import { Definition, DefinitionLink, Position, Uri, commands } from 'vscode';
+import { Position, SignatureHelp, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
 
-export function provideDefinition(position: Position, uri: Uri) {
+export function provideSignatureHelp(position: Position, triggerCharacter: string | undefined) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,
@@ -10,27 +10,25 @@ export function provideDefinition(position: Position, uri: Uri) {
 	} = positionDetails;
 	const embeddedPosition = areaController?.updatePosition(position) || position;
 
-
+	const SignatureHelp = commands.executeCommand<SignatureHelp>(
+		"vscode.executeSignatureHelpProvider",
+		embeddedUri,
+		embeddedPosition,
+		triggerCharacter
+	);
 
 
 	const redirectObject = createProxyRedirectValue(this, areaController);
 	const testIfCanRedirect = (obj: Record<any, any>) => {
-		const uriProp = obj["targetUri"] || obj["uri"];
-
+		const uriProp = obj["baseUri"];
 		if (uriProp instanceof Uri) {
 			return uriToString(uriProp) === uriToString(embeddedUri);
 		}
-		return true;
 
+		return true;
 	};
 
-
-	return commands
-		.executeCommand<Definition | DefinitionLink[]>(
-			'vscode.executeDefinitionProvider',
-			embeddedUri,
-			embeddedPosition
-		).then((definition) => {
-			return proxyRedirectEmbedFile(definition, redirectObject, testIfCanRedirect);
-		});
+	return SignatureHelp.then((signatureHelp) => {
+		return proxyRedirectEmbedFile(signatureHelp, redirectObject, testIfCanRedirect);
+	});
 }

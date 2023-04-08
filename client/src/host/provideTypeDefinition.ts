@@ -1,8 +1,8 @@
-import { Definition, DefinitionLink, Position, Uri, commands } from 'vscode';
+import { Definition, DefinitionLink, Location, Position, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
 
-export function provideDefinition(position: Position, uri: Uri) {
+export function provideTypeDefinition(position: Position) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,
@@ -12,25 +12,22 @@ export function provideDefinition(position: Position, uri: Uri) {
 
 
 
-
 	const redirectObject = createProxyRedirectValue(this, areaController);
 	const testIfCanRedirect = (obj: Record<any, any>) => {
-		const uriProp = obj["targetUri"] || obj["uri"];
-
-		if (uriProp instanceof Uri) {
+		
+		if (obj instanceof Location) {
+			const uriProp = obj["uri"];
 			return uriToString(uriProp) === uriToString(embeddedUri);
 		}
-		return true;
 
+		return true;
 	};
 
-
-	return commands
-		.executeCommand<Definition | DefinitionLink[]>(
-			'vscode.executeDefinitionProvider',
-			embeddedUri,
-			embeddedPosition
-		).then((definition) => {
-			return proxyRedirectEmbedFile(definition, redirectObject, testIfCanRedirect);
-		});
+	return commands.executeCommand<Definition | DefinitionLink[]>(
+		'vscode.executeTypeDefinitionProvider',
+		embeddedUri,
+		embeddedPosition,
+	).then((definedType) => { 
+		return proxyRedirectEmbedFile(definedType, redirectObject, testIfCanRedirect);
+	}); 
 }

@@ -39,7 +39,18 @@ connection.onInitialize((_params: InitializeParams) => {
 				resolveProvider: false
 			},
 			definitionProvider: true,
-			hoverProvider: true
+			hoverProvider: true,
+			signatureHelpProvider: {
+
+			},
+			typeDefinitionProvider: true,
+			implementationProvider: true,
+			referencesProvider: true,
+			documentHighlightProvider: true,
+			codeActionProvider: true,
+			codeLensProvider: {
+				resolveProvider: false
+			}
 		}
 	};
 });

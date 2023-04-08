@@ -1,13 +1,10 @@
 import {
-	commands,
-	CompletionList,
+	CodeLens,
 	Definition,
-	DefinitionLink,
-	Hover,
-	MarkdownString,
 	Position,
 	TextDocument,
 	Uri,
+	commands,
 } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { findContentLocationNode } from './utils/findContentLocationNode';
@@ -15,11 +12,18 @@ import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
 import { uriToString } from './utils/uriToString';
 import { ContentAreaController } from './utils/contentAreaController';
-import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbbedFile';
 import { getCompletionItems } from './getCompletionItems';
 import { provideDefinition } from './provideDefinition';
+import { provideHover } from './provideHover';
+import { provideSignatureHelp } from './provideSignatureHelp';
+import { provideTypeDefinition } from './provideTypeDefinition';
+import { provideImplementation } from './provideImplementation';
+import { provideReferences } from './provideReferences';
+import { provideDocumentHighlights } from './provideDocumentHighlights';
+import { provideCodeActions } from './provideCodeActions';
+import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 
-interface embedFileContentFile {
+interface embedContentFile {
 	endOfFileExt: string;
 	uri: Uri;
 	textContent: string;
@@ -45,8 +49,23 @@ export class TextDocumentController {
 			ts.ScriptKind.KTS
 		);
 	}
-	embedFileEmitCache: Map<string, embedFileContentFile> = new Map();
-	getDocumentUpdateDocumentContentAtPositions(position: Position): embedFileContentFile {
+	embedFileEmitCache: Map<string, embedContentFile> = new Map();
+	getAllEmbedFiles(): embedContentFile[] {
+		// const embedFilesContents = this.sourceFile.kixStyleTagChildNodes.map(elementNode => {
+		// 	const styleEmbedContent = createStyleTagContent(this, elementNode);
+		// 	this.embeddedFilesMap.set(uriToString(styleEmbedContent.uri), styleEmbedContent.textContent);
+		// 	return styleEmbedContent;
+		// });
+		const embedFilesContents: embedContentFile[] = [];
+
+
+		const scriptTagContent = createScriptTagContent(this);
+		this.embeddedFilesMap.set(uriToString(scriptTagContent.uri), scriptTagContent.textContent);
+
+		embedFilesContents.push(scriptTagContent);
+		return embedFilesContents;
+	}
+	getDocumentUpdateDocumentContentAtPositions(position: Position): embedContentFile {
 		const offset = this.textdocument.offsetAt(position);
 		const styleContentNode = findContentLocationNode(
 			offset,
@@ -68,156 +87,48 @@ export class TextDocumentController {
 	}
 	getCompletionItems = getCompletionItems
 	provideDefinition = provideDefinition
-	provideHover(position: Position) {
-		const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-		const {
-			uri: embeddedUri,
-			areaController
-		} = positionDetails;
-		const embeddedPosition = areaController?.updatePosition(position) || position;
+	provideHover = provideHover
+	provideSignatureHelp = provideSignatureHelp
+	provideTypeDefinition = provideTypeDefinition
+	provideImplementation = provideImplementation
+	provideReferences = provideReferences
+	provideDocumentHighlights = provideDocumentHighlights
+	provideCodeActions = provideCodeActions
+	provideCodeLenses() {
+		// try {
+		const embedContentFiles = this.getAllEmbedFiles();
+		console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideCodeLenses --> embedContentFiles:", embedContentFiles);
+		return Promise.all(embedContentFiles.map(embedFileDetails => {
+			const embeddedUri = embedFileDetails.uri;
+			const areaController = embedFileDetails.areaController;
+			console.log("🚀 --> file: index.ts:124 --> TextDocumentController --> provideCodeLenses --> embeddedUri:", embeddedUri);
 
+			// console.log("🚀 --> file: index.ts:123 --> TextDocumentController --> provideCodeLenses --> embedFileDetails:", embedFileDetails);
+			const redirectObject = createProxyRedirectValue(this, areaController);
+			const testIfCanRedirect = (obj: Record<any, any>) => {
+				return true;
+			};
+			const commm = commands.executeCommand<CodeLens[]>(
+				'vscode.executeCodeLensProvider',
+				embeddedUri
+			);
+			// console.log("🚀 --> file: index.ts:112 --> TextDocumentController --> provideCodeLenses --> commm:", commm);
+			(commm as any).catch((error: any) => {
+				console.error(error);
 
+			});
+			return commm.then((codeLens) => {
+				console.log("🚀 --> file: index.ts:121 --> TextDocumentController --> returncommm.then --> codeLens:", codeLens);
+				return proxyRedirectEmbedFile(codeLens, redirectObject, testIfCanRedirect);
+			});
 
-		const redirectObject = createProxyRedirectValue(this, areaController);
-		const testIfCanRedirect = (obj: Record<any, any>) => {
-			const uriProp = obj["baseUri"];
-			if (uriProp instanceof Uri) {
-				// console.log("🚀 --> file: --> uriProp:", uriProp, uriToString(uriProp) === uriToString(embeddedUri));
-				return uriToString(uriProp) === uriToString(embeddedUri);
-				// return true;
-			}
-			return true;
-
-		};
-
-		return commands.executeCommand<Hover[]>(
-			'vscode.executeHoverProvider',
-			embeddedUri,
-			embeddedPosition
-		).then((hovered) => {
-			const hover = hovered[0];
-			if (hover) {
-				try {
-					const ppxxxi = proxyRedirectEmbedFile(hover, redirectObject, testIfCanRedirect);
-					// hover.contents = undefined;
-					// const tttt = new MarkdownString();
-					// tttt.
-					// console.log(
-					// 	"🚀 --> file: --> hover:",
-					// 	{...(hover as any).contents[1]},
-					// 	{...(ppxxxi as any).contents[1]},
-					// 	"SSS",
-					// 	ppxxxi.contents[1] instanceof MarkdownString
-					// );
-					// console.log("1:",positionDetails.textContent.split("\n")[hover.range.start.line].slice(hover.range.start.character-10,hover.range.start.character));
-					// console.log("2:",this.textContent.split("\n")[ppxxxi.range.start.line].slice(ppxxxi.range.start.character-10,ppxxxi.range.start.character));
-					// console.log("🚀 --> file: index.ts:212 --> TextDocumentController --> ).then --> hover1:", hover);
-					// console.log("🚀 --> file: index.ts:212 --> TextDocumentController --> ).then --> hover2:", {
-					// 	...proxyRedirectFile(hover, redirectObject, testIfCanRedirect)
-					// });
-					// return hover;
-
-					return ppxxxi;
-					return {
-						...hover,
-						contents: hover.contents.map(e => proxyRedirectEmbedFile(e as any, redirectObject, testIfCanRedirect)),
-						range: hover.range
-					};
-				} catch (error) {
-					console.log("🚀 --> file: --> error:", error);
-
-				}
-
-			}
+		})).then((result) => {
+			console.log("🚀 --> file: index.ts:114 --> TextDocumentController --> provideCodeLenses --> result:", result);
+			return result.flat(1);
 		});
+		// } catch (error) {
+		// 	console.log("🚀 --> file: index.ts:120 --> TextDocumentController --> provideCodeLenses --> error:", error);
+		// 	return [];
+		// }
 	}
-	// provideSignatureHelp(position: Position, triggerCharacter: string | undefined) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const SignatureHelp = commands.executeCommand<SignatureHelp>(
-	// 		"vscode.executeSignatureHelpProvider",
-	// 		positionDetails.uri,
-	// 		positionDetails.position,
-	// 		triggerCharacter
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:112 --> TextDocumentController --> provideSignatureHelp --> SignatureHelp:", SignatureHelp);
-	// 	return SignatureHelp;
-	// }
-
-	// provideTypeDefinition(position: Position) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const typeDefinition = commands.executeCommand<Definition | DefinitionLink[]>(
-	// 		'vscode.executeTypeDefinitionProvider',
-	// 		positionDetails.uri,
-	// 		positionDetails.position,
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:122 --> TextDocumentController --> provideDefinition --> definition:", typeDefinition);
-	// 	// რეინჯი განაახლე აქქქ
-	// 	return typeDefinition;
-	// }
-	// provideImplementation(position: Position) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const implementation = commands.executeCommand<Definition | DefinitionLink[]>(
-	// 		'vscode.executeTypeDefinitionProvider',
-	// 		positionDetails.uri,
-	// 		positionDetails.position,
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:145 --> TextDocumentController --> provideImplementation --> implementation:", implementation);
-	// 	// რეინჯი განაახლე აქქქ
-	// 	return implementation;
-	// }
-	// provideReferences(position: Position) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const references = commands.executeCommand<Location[]>(
-	// 		'vscode.executeReferenceProvider',
-	// 		positionDetails.uri,
-	// 		positionDetails.position,
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:155 --> TextDocumentController --> provideReferences --> references:", references);
-
-	// 	// რეინჯი განაახლე აქქქ
-	// 	return references;
-	// }
-	// provideDocumentHighlights(position: Position) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const documentHighlights = commands.executeCommand<DocumentHighlight[]>(
-	// 		'vscode.executeDocumentHighlights',
-	// 		positionDetails.uri,
-	// 		positionDetails.position,
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:167 --> TextDocumentController --> provideDocumentHighlights --> documentHighlights:", documentHighlights);
-
-	// 	// რეინჯი განაახლე აქქქ
-	// 	return documentHighlights;
-	// }
-	// provideDocumentSymbols(position: Position) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
-	// 	const documentSymbols = commands.executeCommand<SymbolInformation[] | DocumentSymbol[]>(
-	// 		'vscode.executeDocumentSymbolProvider',
-	// 		positionDetails.uri,
-	// 	);
-	// 	// console.log("🚀 --> file: index.ts:178 --> TextDocumentController --> provideDocumentSymbols --> documentSymbols:", documentSymbols);
-
-	// 	// რეინჯი განაახლე აქქქ
-	// 	return documentSymbols;
-	// }
-	// provideCodeActions(range: Range) {
-	// 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(range.start);
-	// 	if (positionDetails.isStyle === false) {
-	// 		range = positionDetails.areaController.updateRange(range);
-	// 	}
-	// 	const codeActions = commands.executeCommand<(Command | CodeAction)[]>(
-	// 		'vscode.executeCodeActionProvider',
-	// 		positionDetails.uri,
-	// 		range
-	// 	);
-
-	// 	return codeActions;
-	// 	// const result = await base.provideCodeActions?.(document, range, context, token);
-	// 	// console.log("provideCodeActions");
-	// 	// const textDocumentController = getTextDocumentController(document);
-	// 	//
-	// 	// return textDocumentController.provideCodeActions(position);
-	// 	//
-	// 	// return result?.filter(codeAction => codeAction.title.indexOf('__VLS_') === -1);
-	// }
 }

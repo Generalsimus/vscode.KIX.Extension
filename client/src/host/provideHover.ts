@@ -1,8 +1,8 @@
-import { Definition, DefinitionLink, Position, Uri, commands } from 'vscode';
+import { Hover, Position, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
 
-export function provideDefinition(position: Position, uri: Uri) {
+export function provideHover(position: Position) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,
@@ -12,25 +12,24 @@ export function provideDefinition(position: Position, uri: Uri) {
 
 
 
-
 	const redirectObject = createProxyRedirectValue(this, areaController);
 	const testIfCanRedirect = (obj: Record<any, any>) => {
-		const uriProp = obj["targetUri"] || obj["uri"];
-
+		const uriProp = obj["baseUri"];
 		if (uriProp instanceof Uri) {
 			return uriToString(uriProp) === uriToString(embeddedUri);
 		}
-		return true;
 
+		return true;
 	};
 
-
-	return commands
-		.executeCommand<Definition | DefinitionLink[]>(
-			'vscode.executeDefinitionProvider',
-			embeddedUri,
-			embeddedPosition
-		).then((definition) => {
-			return proxyRedirectEmbedFile(definition, redirectObject, testIfCanRedirect);
-		});
+	return commands.executeCommand<Hover[]>(
+		'vscode.executeHoverProvider',
+		embeddedUri,
+		embeddedPosition
+	).then((hovered) => {
+		const hover = hovered[0];
+		if (hover) {
+			return proxyRedirectEmbedFile(hover, redirectObject, testIfCanRedirect);
+		}
+	});
 }
