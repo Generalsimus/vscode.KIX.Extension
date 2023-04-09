@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { ExtensionContext, TextDocument, workspace } from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { EMBEDDED_LANGUAGE_SCHEMA } from './host/utils/helpers';
 import { TextDocumentController } from './host';
 import { uriToString } from './host/utils/uriToString';
@@ -124,19 +124,36 @@ export function activate(context: ExtensionContext) {
 
 				return textDocumentController.provideCodeActions(range);
 			},
-			provideCodeLenses(document, token, next) {
-				console.log("provideCodeLenses");
+			// TODO:FIX ME
+			// provideCodeLenses(document, token, next) {
+			// 	console.log("provideCodeLenses");
+			// 	console.log("🚀 --> file: extension.ts:134 --> provideCodeLenses --> document:", document.uri, document.uri.toString());
+			// 	const textDocumentController = getTextDocumentController(document);
+
+			// 	return textDocumentController.provideCodeLenses();
+			// }
+			provideColorPresentations(color, context, token, next) {
+				console.log("provideColorPresentations");
+				const textDocumentController = getTextDocumentController(context.document);
+
+				return textDocumentController.provideColorPresentations(color, context.range);
+			},
+			provideDocumentColors(document, token, next) {
+				console.log("provideDocumentColors");
 				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideCodeLenses();
-			}
+				return textDocumentController.provideDocumentColors();
+			},
+			// provideDiagnostics(document, previousResultId, token, next) {
+
+			// }
 			// console.log("provideCodeActions");
 			// const textDocumentController = getTextDocumentController(document);
 
 			// return textDocumentController.provideCodeActions(range);
 			// }, 
 			// provideCodeLenses?: (this: void, document: TextDocument, token: CancellationToken, next: ProvideCodeLensesSignature) => ProviderResult<VCodeLens[]>;
-		
+
 
 		}
 	};

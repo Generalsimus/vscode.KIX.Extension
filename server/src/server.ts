@@ -3,12 +3,27 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { getLanguageService } from 'vscode-html-languageservice';
-import { createConnection, InitializedParams, InitializeParams, ProposedFeatures, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver';
+// import { getLanguageService } from 'vscode-html-languageservice';
+// import { createConnection, InitializedParams, InitializeParams, ProposedFeatures, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-// import ts from '../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-// import { CustomLanguageServiceHost } from '../../client/src/host';
+import {
+	createConnection,
+	TextDocuments,
+	Diagnostic,
+	DiagnosticSeverity,
+	ProposedFeatures,
+	InitializeParams,
+	DidChangeConfigurationNotification,
+	CompletionItem,
+	CompletionItemKind,
+	TextDocumentPositionParams,
+	TextDocumentSyncKind,
+	InitializeResult
+} from 'vscode-languageserver/node';
 
+// Create a connection for the server, using Node's IPC as a transport.
+// Also include all preview / proposed LSP features.
+const connection = createConnection(ProposedFeatures.all);
 
 
 
@@ -19,13 +34,16 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 // );
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
-const connection = createConnection(ProposedFeatures.all);
+// const connection = createConnection(ProposedFeatures.all,undefined,undefined);
+// const sss = new LanguageClient
 
+// globalThis.process.stdin
+// let connection  = createConnection(globalThis.process.stdin, process.stdout);
 // Create a simple text document manager. The text document manager
 // supports full document sync only
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
-const htmlLanguageService = getLanguageService();
+// const htmlLanguageService = getLanguageService();
 
 connection.onInitialize((_params: InitializeParams) => {
 	// console.log("🚀 --> onInitialize", _params);
@@ -48,9 +66,10 @@ connection.onInitialize((_params: InitializeParams) => {
 			referencesProvider: true,
 			documentHighlightProvider: true,
 			codeActionProvider: true,
-			codeLensProvider: {
-				resolveProvider: false
-			}
+			// codeLensProvider: {
+			// 	resolveProvider: true
+			// }
+			colorProvider: true
 		}
 	};
 });
