@@ -1,9 +1,8 @@
-import { Position, Uri } from 'vscode';
+import { Uri } from 'vscode';
 import { removeStyleTagUnsafeContent } from './removeStyleTagUnsafeContent';
 import { makeScriptTagsSafe } from './makeScriptTagsSafe';
 import { TextDocumentController } from '..';
 import { getEmbedFileUri } from './getEmbedFileUri';
-import { ContentAreaController } from './contentAreaController';
 
 export const createScriptTagContent = (documentController: TextDocumentController) => {
 	const originalFileName = documentController.fileName;

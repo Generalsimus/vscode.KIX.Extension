@@ -18,7 +18,11 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	DocumentColorRequest,
+	ColorPresentation,
+	Command,
+	FormattingOptions
 } from 'vscode-languageserver/node';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -69,7 +73,13 @@ connection.onInitialize((_params: InitializeParams) => {
 			// codeLensProvider: {
 			// 	resolveProvider: true
 			// }
-			colorProvider: true
+			// colorProvider: {
+			// 	// documentSelector
+			// },
+			// DocumentColorRequest:true,
+			// ColorPresentation:true,
+			inlayHintProvider: true,
+			documentFormattingProvider: true,
 		}
 	};
 });
@@ -89,6 +99,7 @@ connection.onInitialize((_params: InitializeParams) => {
 
 
 // connection.onCompletion(async (textDocumentPosition, token) => {
+// Command.ex
 // 	const document = documents.get(textDocumentPosition.textDocument.uri);
 // // 	console.log("🚀 --> onCompletion");
 

@@ -6,7 +6,7 @@ export const makeScriptTagsSafe = (
 	scriptTagChildNodes: ts.JsxElement[]
 ) => {
 	const areaController = new ContentAreaController(textContent);
-	areaController.addContent(`<div>\n`, `\n</div>`, 0, textContent.length);
+	areaController.addContent(`<>\n`, `\n</>`, 0, textContent.length);
 
 	for (const scriptTaNode of scriptTagChildNodes) {
 		const { pos, end } = scriptTaNode.children;

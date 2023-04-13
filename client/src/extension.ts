@@ -112,12 +112,6 @@ export function activate(context: ExtensionContext) {
 
 				return textDocumentController.provideReferences(position);
 			},
-			provideDocumentHighlights(document, position, next) {
-				console.log("provideDocumentHighlights");
-				const textDocumentController = getTextDocumentController(document);
-
-				return textDocumentController.provideDocumentHighlights(position);
-			},
 			provideCodeActions(document, range, context, token, next) {
 				console.log("provideCodeActions");
 				const textDocumentController = getTextDocumentController(document);
@@ -132,17 +126,38 @@ export function activate(context: ExtensionContext) {
 
 			// 	return textDocumentController.provideCodeLenses();
 			// }
-			provideColorPresentations(color, context, token, next) {
-				console.log("provideColorPresentations");
-				const textDocumentController = getTextDocumentController(context.document);
+			// TODO:FIX ME
+			// provideColorPresentations(color, context, token, next) {
+			// 	console.log("provideColorPresentations");
+			// 	const textDocumentController = getTextDocumentController(context.document);
 
-				return textDocumentController.provideColorPresentations(color, context.range);
-			},
-			provideDocumentColors(document, token, next) {
-				console.log("provideDocumentColors");
+			// 	return textDocumentController.provideColorPresentations(color, context.range);
+			// },
+
+			// TODO:FIX ME
+			// provideDocumentColors(document, token, next) {
+			// 	console.log("provideDocumentColors");
+			// 	const textDocumentController = getTextDocumentController(document);
+
+			// 	return textDocumentController.provideDocumentColors();
+			// },
+			provideInlayHints(document, viewPort, token, next) {
+				console.log("provideInlayHints");
 				const textDocumentController = getTextDocumentController(document);
 
-				return textDocumentController.provideDocumentColors();
+				return textDocumentController.provideInlayHints(viewPort);
+			},
+			provideDocumentHighlights(document, position, next) {
+				console.log("provideDocumentHighlights");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideDocumentHighlights(position);
+			},
+			provideDocumentFormattingEdits(document, options, token, next) {
+				console.log("provideDocumentFormattingEdits");
+				const textDocumentController = getTextDocumentController(document);
+
+				return textDocumentController.provideDocumentFormattingEdits(options);
 			},
 			// provideDiagnostics(document, previousResultId, token, next) {
 

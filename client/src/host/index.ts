@@ -4,11 +4,16 @@ import {
 	ColorInformation,
 	ColorPresentation,
 	Definition,
+	FormattingOptions,
+	InlayHint,
+	Location,
 	Position,
 	Range,
 	TextDocument,
+	TextEdit,
 	Uri,
 	commands,
+	window,
 } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { findContentLocationNode } from './utils/findContentLocationNode';
@@ -26,7 +31,14 @@ import { provideReferences } from './provideReferences';
 import { provideDocumentHighlights } from './provideDocumentHighlights';
 import { provideCodeActions } from './provideCodeActions';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { provideCodeLenses } from './provideCodeLenses';
+import { provideColorPresentations } from './provideColorPresentations';
+import { provideDocumentColors } from './provideDocumentColors';
+import { provideInlayHints } from './provideInlayHints';
+// commands.getCommands().then(red => {
+// 	console.log("🚀 --> file: index.ts:30 --> commands.getCommands --> red:", red);
 
+// });
 interface embedContentFile {
 	endOfFileExt: string;
 	uri: Uri;
@@ -63,10 +75,10 @@ export class TextDocumentController {
 		// const embedFilesContents: embedContentFile[] = [];
 
 
-		// const scriptTagContent = createScriptTagContent(this);
-		// this.embeddedFilesMap.set(uriToString(scriptTagContent.uri), scriptTagContent.textContent);
+		const scriptTagContent = createScriptTagContent(this);
+		this.embeddedFilesMap.set(uriToString(scriptTagContent.uri), scriptTagContent.textContent);
 
-		// embedFilesContents.push(scriptTagContent);
+		embedFilesContents.push(scriptTagContent);
 		return embedFilesContents;
 	}
 	getDocumentUpdateDocumentContentAtPositions(position: Position): embedContentFile {
@@ -98,128 +110,135 @@ export class TextDocumentController {
 	provideReferences = provideReferences
 	provideDocumentHighlights = provideDocumentHighlights
 	provideCodeActions = provideCodeActions
-	provideCodeLenses() {
-		// try {
+	provideCodeLenses = provideCodeLenses
+	provideColorPresentations = provideColorPresentations
+	provideDocumentColors = provideDocumentColors
+	provideInlayHints = provideInlayHints
+	provideDocumentFormattingEdits(options: FormattingOptions) {
 		const embedContentFiles = this.getAllEmbedFiles();
-		console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideCodeLenses --> embedContentFiles:", embedContentFiles);
+
 		return Promise.all(embedContentFiles.map(embedFileDetails => {
-			const embeddedUri = embedFileDetails.uri;
-			const areaController = embedFileDetails.areaController;
-			console.log("🚀 --> file: index.ts:124 --> TextDocumentController --> provideCodeLenses --> embeddedUri:", embeddedUri);
-
-			// console.log("🚀 --> file: index.ts:123 --> TextDocumentController --> provideCodeLenses --> embedFileDetails:", embedFileDetails);
-			const redirectObject = createProxyRedirectValue(this, areaController);
-			const testIfCanRedirect = (obj: Record<any, any>) => {
-				return true;
-			};
-			const commm = commands.executeCommand<CodeLens[]>(
-				'vscode.executeCodeLensProvider',
-				embeddedUri
+			const {
+				uri: embeddedUri,
+				areaController
+			} = embedFileDetails;
+			return commands.executeCommand<TextEdit[]>(
+				'vscode.executeFormatDocumentProvider',
+				embeddedUri,
+				options
+			).then((inlayHints) => {
+				// console.log("🚀 --> file: index.ts:142 --> TextDocumentController --> ).then --> inlayHint:", inlayHint);
+				// console.log("🚀 --> file: index.ts:139 --> TextDocumentController --> ).then --> inlayHint:", inlayHint);
+				// // return inlayHint;
+				// return proxyRedirectEmbedFile(inlayHint, redirectObject, testIfCanRedirect);
+				return {
+					inlayHints,
+					embedFileDetails
+				};
+			});
+		})).then(embedInlineHints => {
+			console.log(
+				"🚀 --> inlayHints:",
+				embedInlineHints.map(e => e.inlayHints).flat(Infinity)
 			);
-			// console.log("🚀 --> file: index.ts:112 --> TextDocumentController --> provideCodeLenses --> commm:", commm);
-			(commm as any).catch((error: any) => {
-				console.error(error);
+			const newInlineHints: TextEdit[] = [];
+			for (const { embedFileDetails: currentEmbedFileDetails, inlayHints: currentInlayHints } of embedInlineHints) {
 
-			});
-			return commm.then((codeLens) => {
-				console.log("🚀 --> file: index.ts:121 --> TextDocumentController --> returncommm.then --> codeLens:", codeLens);
-				return proxyRedirectEmbedFile(codeLens, redirectObject, testIfCanRedirect);
-			});
-
-		})).then((result) => {
-			console.log("🚀 --> file: index.ts:114 --> TextDocumentController --> provideCodeLenses --> result:", result);
-			return result.flat(1);
-		});
-		// } catch (error) {
-		// 	console.log("🚀 --> file: index.ts:120 --> TextDocumentController --> provideCodeLenses --> error:", error);
-		// 	return [];
-		// }
-	}
-	provideColorPresentations(color: Color, range: Range) {
-		const embedContentFiles = this.getAllEmbedFiles();
-		// console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideCodeLenses --> embedContentFiles:", embedContentFiles);
-		return Promise.all(embedContentFiles.map(async (embedFileDetails) => {
-			console.log("🚀 --> file: index.ts:142 --> TextDocumentController --> returnPromise.all --> embedFileDetails:", embedFileDetails);
-			try {
-				const embeddedUri = embedFileDetails.uri;
-				const areaController = embedFileDetails.areaController;
-
-				const embeddedRange = areaController?.updateRange(range) || range;
+				for (const currentInlayHint of currentInlayHints) {
+					const currentInlayHintRange = currentEmbedFileDetails.areaController?.updateRange(currentInlayHint.range) || currentInlayHint.range;
+					embedInlineHints.forEach(({ embedFileDetails, inlayHints }, index) => {
+						// for (const { embedFileDetails, inlayHints } of embedInlineHints) {
+						for (const inlayHint of inlayHints) {
+							const inlayHintRange = embedFileDetails.areaController?.updateRange(inlayHint.range) || inlayHint.range;
+							if (currentInlayHintRange.contains(inlayHintRange)) {
+								// currentInlayHint.replace
+							}
+						}
+						// }
+					});
 
 
-				const redirectObject = createProxyRedirectValue(this, areaController);
-				const testIfCanRedirect = (obj: Record<any, any>) => {
-					return true;
-				};
-				// const commm = commands.executeCommand<CodeLens[]>(
-				// 	'vscode.executeDocumentColorProvider',
-				// 	embeddedUri
-				// );
-
-				const colorPresentations = await commands.executeCommand<ColorPresentation[]>(
-					'vscode.executeColorPresentationProvider',
-					color,
-					{
-						uri: embeddedUri,
-						range: embeddedRange
-					}
-				).then((colorPresentation) => {
-					console.log("🚀 --> file: index.ts:169 --> TextDocumentController --> returncolorPresentations.then --> colorPresentation:", colorPresentation);
-
-					return proxyRedirectEmbedFile(colorPresentation, redirectObject, testIfCanRedirect);
-				});
-				console.log("🚀 --> file: index.ts:165 --> TextDocumentController --> provideColorPresentations --> colorPresentations:", colorPresentations);
-				return colorPresentations;
-
-			} catch (error) {
-				console.log("🚀 --> file: index.ts:174 --> TextDocumentController --> provideColorPresentations --> error:", error);
-
+				}
+				// const { areaController: currentAreaController } = currentEmbedFileDetails;
+				// for (const embedInlineHint of embedInlineHints) {
+				// 	const currentRange =  currentAreaController.updateRange(currentInlayHints.)
+				// }
 			}
-			return [];
-		})).then((colorPresentation) => {
-			return colorPresentation.flat(1);
+			return newInlineHints;
 		});
 
-	}
-	provideDocumentColors() {
-		const embedContentFiles = this.getAllEmbedFiles();
-		console.log("🚀 --> embedContentFiles:", { embedContentFiles, embeddedFilesMap: this.embeddedFilesMap });
-
-		return Promise.all(embedContentFiles.map(async (embedFileDetails) => {
-			try {
-				const embeddedUri = embedFileDetails.uri;
-				const areaController = embedFileDetails.areaController;
-
-				// const embeddedRange = areaController?.updateRange(range) || range;
-				console.log("🚀 --> file: --> embeddedUri:", { embeddedUri, uri: this.textdocument.uri });
-
-
-				const redirectObject = createProxyRedirectValue(this, areaController);
-				const testIfCanRedirect = (obj: Record<any, any>) => {
-					return true;
-				};
-
-
-				const documentColor = await commands.executeCommand<ColorInformation[]>(
-					'vscode.executeDocumentColorProvider',
-					embeddedUri,
-					embeddedUri
-				).then((documentColor) => {
-					console.log("🚀 --> documentColor:", documentColor);
-
-					return proxyRedirectEmbedFile(documentColor, redirectObject, testIfCanRedirect);
-				});
-				console.log("🚀 --> file: index.ts:204 --> TextDocumentController --> provideDocumentColors --> documentColor:", documentColor);
-				return documentColor;
-			} catch (error) {
-				console.log("EEE", error);
-
-			}
-
-			return [];
-		})).then((colorPresentation) => {
-			return colorPresentation.flat(1);
-		});
 	}
 }
 
+
+let inc = 0;
+const getSelectorKey = () => `ZAWSXDECFRVGBHNJMKLMJINHUBGYTVFRCDES${Math.random()}ZWAXSECRVTFBNHMJJINHUBHYGVTFR${++inc}SDASDSADDSAD`;
+const formatDocument = (documentController: TextDocumentController) => {
+	const sourceFile = documentController.sourceFile;
+	const scriptTagChildNodes = sourceFile.kixScriptTagChildNodes;
+	const styleTagChildNodes = sourceFile.kixStyleTagChildNodes;
+	const tagNodes = [...scriptTagChildNodes, ...styleTagChildNodes].sort((e1, e2) => (e1.pos - e2.pos));
+
+	const tagNodesHierarchy = new Map();
+	const getChildNodes = (pos: number, end: number, tagNodes: ts.JsxElement[]) => {
+		return tagNodes.filter((node) => {
+			const contain = node.pos > pos && end < node.end;
+			// for (const el)
+			// return 
+		});
+	};
+	// for(const tagNode of tagNodes){
+
+	// }
+
+
+
+	const textContent = sourceFile.text;
+	const start = 0;
+	const end = textContent.length;
+
+	// const content = new TextEdit()
+
+
+};
+/**
+ *
+ * script:=>
+ *
+ */
+
+// export function provideInlayHints(range: Range) {
+// 	const embedContentFiles = this.getAllEmbedFiles();
+// 	return Promise.all(embedContentFiles.map(embedFileDetails => {
+// 		const {
+// 			uri: embeddedUri,
+// 			areaController
+// 		} = embedFileDetails;
+// 		const embeddedRange = areaController?.updateRange(range) || range;
+
+
+
+// 		const redirectObject = createProxyRedirectValue(this, areaController);
+// 		const testIfCanRedirect = (obj: Record<any, any>) => {
+// 			if (obj instanceof Location) {
+// 				const uriProp = obj["uri"];
+// 				return uriToString(uriProp) === uriToString(embeddedUri);
+// 			}
+
+// 			return true;
+// 		};
+
+// 		return commands.executeCommand<InlayHint[]>(
+// 			'vscode.executeHoverProvider',
+// 			embeddedUri,
+// 			embeddedRange
+// 		).then((inlayHint) => {
+// 			console.log("🚀 --> file: index.ts:139 --> TextDocumentController --> ).then --> inlayHint:", inlayHint);
+
+// 			return proxyRedirectEmbedFile(inlayHint, redirectObject, testIfCanRedirect);
+// 		});
+// 	})).then(inlayHints => {
+// 		return inlayHints.flat(1);
+// 	});
+
+// }
