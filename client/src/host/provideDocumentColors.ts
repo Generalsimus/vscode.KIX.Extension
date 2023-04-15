@@ -1,7 +1,8 @@
 import { ColorInformation, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { TextDocumentController } from '.';
 
-export function provideDocumentColors() {
+export function provideDocumentColors(this: TextDocumentController) {
 	const embedContentFiles = this.getAllEmbedFiles();
 	console.log("🚀 --> embedContentFiles:", { embedContentFiles, embeddedFilesMap: this.embeddedFilesMap });
 	// const editor = window.activeTextEditor;

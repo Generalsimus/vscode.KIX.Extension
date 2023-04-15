@@ -1,9 +1,10 @@
 import { CodeLens, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { TextDocumentController } from '.';
 
 	
 	
-export function provideCodeLenses() {
+export function provideCodeLenses(this: TextDocumentController) {
 	// try {
 	const embedContentFiles = this.getAllEmbedFiles();
 	console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideCodeLenses --> embedContentFiles:", embedContentFiles);

@@ -1,12 +1,14 @@
 import { CompletionList, Position, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { TextDocumentController } from '.';
 
-export function getCompletionItems(position: Position, uri: Uri, triggerCharacter: string | undefined) {
-	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
+export function getCompletionItems(this: TextDocumentController, position: Position, uri: Uri, triggerCharacter: string | undefined) {
+	const embedFileContentArea = this.getDocumentUpdateDocumentContentAtPositions(position);
+	// console.log("🚀 --> file: getCompletionItems.ts:7 --> getCompletionItems --> embedFileContentArea:", embedFileContentArea);
 	const {
 		uri: embeddedUri,
 		areaController
-	} = positionDetails;
+	} = embedFileContentArea;
 	const embeddedPosition = areaController?.updatePosition(position) || position;
 
 

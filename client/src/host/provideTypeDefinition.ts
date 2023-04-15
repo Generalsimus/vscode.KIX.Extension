@@ -1,8 +1,9 @@
 import { Definition, DefinitionLink, Location, Position, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
-export function provideTypeDefinition(position: Position) {
+export function provideTypeDefinition(this: TextDocumentController, position: Position) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,
@@ -14,7 +15,7 @@ export function provideTypeDefinition(position: Position) {
 
 	const redirectObject = createProxyRedirectValue(this, areaController);
 	const testIfCanRedirect = (obj: Record<any, any>) => {
-		
+
 		if (obj instanceof Location) {
 			const uriProp = obj["uri"];
 			return uriToString(uriProp) === uriToString(embeddedUri);
@@ -27,7 +28,7 @@ export function provideTypeDefinition(position: Position) {
 		'vscode.executeTypeDefinitionProvider',
 		embeddedUri,
 		embeddedPosition,
-	).then((definedType) => { 
+	).then((definedType) => {
 		return proxyRedirectEmbedFile(definedType, redirectObject, testIfCanRedirect);
-	}); 
+	});
 }

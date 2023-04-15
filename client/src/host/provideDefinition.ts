@@ -1,8 +1,9 @@
 import { Definition, DefinitionLink, Position, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
-export function provideDefinition(position: Position, uri: Uri) {
+export function provideDefinition(this: TextDocumentController, position: Position, uri: Uri) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,

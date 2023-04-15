@@ -1,8 +1,9 @@
 import { Hover, Position, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
-export function provideHover(position: Position) {
+export function provideHover(this: TextDocumentController, position: Position) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,

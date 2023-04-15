@@ -1,8 +1,9 @@
 import { Position, SignatureHelp, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
-export function provideSignatureHelp(position: Position, triggerCharacter: string | undefined) {
+export function provideSignatureHelp(this: TextDocumentController, position: Position, triggerCharacter: string | undefined) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,

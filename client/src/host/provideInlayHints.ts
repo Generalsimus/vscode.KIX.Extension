@@ -1,8 +1,9 @@
 import { InlayHint, Location, Range, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
-export function provideInlayHints(range: Range) {
+export function provideInlayHints(this: TextDocumentController, range: Range) {
 	const embedContentFiles = this.getAllEmbedFiles();
 	return Promise.all(embedContentFiles.map(embedFileDetails => {
 		const {

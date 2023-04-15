@@ -1,7 +1,8 @@
 import { Color, ColorPresentation, Range, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { TextDocumentController } from '.';
 
-export function provideColorPresentations(color: Color, range: Range) {
+export function provideColorPresentations(this: TextDocumentController, color: Color, range: Range) {
 	const embedContentFiles = this.getAllEmbedFiles();
 	// console.log("🚀 --> file: index.ts:98 --> TextDocumentController --> provideCodeLenses --> embedContentFiles:", embedContentFiles);
 	return Promise.all(embedContentFiles.map(async (embedFileDetails) => {

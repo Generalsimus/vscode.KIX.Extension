@@ -1,25 +1,15 @@
 import {
-	CodeLens,
-	Color,
-	ColorInformation,
-	ColorPresentation,
-	Definition,
 	FormattingOptions,
-	InlayHint,
-	Location,
 	Position,
-	Range,
 	TextDocument,
 	TextEdit,
 	Uri,
 	commands,
-	window,
 } from 'vscode';
 import ts from '../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
-import { findContentLocationNode } from './utils/findContentLocationNode';
+import { findContentLocationArea } from './utils/findContentLocationArea';
 import { createStyleTagContent } from './utils/createStyleTagContent';
 import { createScriptTagContent } from './utils/createScriptTagContent';
-import { uriToString } from './utils/uriToString';
 import { ContentAreaController } from './utils/contentAreaController';
 import { getCompletionItems } from './getCompletionItems';
 import { provideDefinition } from './provideDefinition';
@@ -30,23 +20,25 @@ import { provideImplementation } from './provideImplementation';
 import { provideReferences } from './provideReferences';
 import { provideDocumentHighlights } from './provideDocumentHighlights';
 import { provideCodeActions } from './provideCodeActions';
-import {
-	createProxyRedirectValue,
-	proxyRedirectEmbedFile,
-} from './utils/proxyRedirectEmbedFile';
 import { provideCodeLenses } from './provideCodeLenses';
 import { provideColorPresentations } from './provideColorPresentations';
 import { provideDocumentColors } from './provideDocumentColors';
 import { provideInlayHints } from './provideInlayHints';
 import { removeAllContentFromString } from './utils/removeAllContentFromString';
-import { parentPort } from 'worker_threads';
+import { EmbedContentUriDetails, getNodeUriDetails } from './utils/getNodeUriDetails';
+import { containNode } from './utils/nodeContains';
 // commands.getCommands().then(red => {
 // 	console.log("🚀 --> file: index.ts:30 --> commands.getCommands --> red:", red);
 
 // });
-interface embedContentFile {
-	endOfFileExt: string;
-	uri: Uri;
+// interface embedContentFile {
+// 	endOfFileExt: string;
+// 	uri: Uri;
+// 	textContent: string;
+// 	areaController?: ContentAreaController | undefined;
+// }
+export interface EmbedFileContentArea extends EmbedContentUriDetails {
+	node: ts.Node,
 	textContent: string;
 	areaController?: ContentAreaController | undefined;
 }
@@ -57,68 +49,64 @@ export class TextDocumentController {
 	sourceFile: ts.SourceFile;
 	embeddedFilesMap: Map<string, string>;
 	formatCode: FormatCodeController
+	styleEmbedFileContentAreas: EmbedFileContentArea[]
+	// scriptEmbedFileContentAreas: EmbedFileContentArea[]
+	scriptEmbedFileContentArea: EmbedFileContentArea
 	constructor(document: TextDocument, embeddedFilesMap: Map<string, string>) {
 		this.textdocument = document;
 		this.embeddedFilesMap = embeddedFilesMap;
 		this.fileName = document.uri.toString(true);
-		this.textContent = document.getText();
+		const originalTextContent = this.textContent = document.getText();
 
 
-		this.sourceFile = ts.createSourceFile(
+		const sourceFile = this.sourceFile = ts.createSourceFile(
 			this.fileName,
 			this.textContent,
 			ts.ScriptTarget.Latest,
 			false,
 			ts.ScriptKind.KTS
 		);
-
-		this.formatCode = new FormatCodeController(this.sourceFile);
-	}
-	embedFileEmitCache: Map<string, embedContentFile> = new Map();
-	getAllEmbedFiles(): embedContentFile[] {
-		const embedFilesContents = this.sourceFile.kixStyleTagChildNodes.map((elementNode) => {
-			const styleEmbedContent = createStyleTagContent(this, elementNode);
-			this.embeddedFilesMap.set(
-				uriToString(styleEmbedContent.uri),
-				styleEmbedContent.textContent
-			);
-			return styleEmbedContent;
-		});
-		// const embedFilesContents: embedContentFile[] = [];
-
-		const scriptTagContent = createScriptTagContent(this);
-		this.embeddedFilesMap.set(
-			uriToString(scriptTagContent.uri),
-			scriptTagContent.textContent
-		);
-
-		embedFilesContents.push(scriptTagContent);
-		return embedFilesContents;
-	}
-	getDocumentUpdateDocumentContentAtPositions(position: Position): embedContentFile {
-		const offset = this.textdocument.offsetAt(position);
-		const styleContentNode = findContentLocationNode(
-			offset,
-			this.sourceFile.kixStyleTagChildNodes
-		);
-		if (styleContentNode === undefined) {
-			const scriptTagContent = createScriptTagContent(this);
-
-			this.embeddedFilesMap.set(
-				uriToString(scriptTagContent.uri),
-				scriptTagContent.textContent
-			);
-			return scriptTagContent;
+		// create script tag Content
+		const scriptContent = createScriptTagContent(sourceFile);
+		const scriptUriDetails = getNodeUriDetails(sourceFile, this.fileName, false, "SCRIPT_TAG");
+		this.scriptEmbedFileContentArea = {
+			...scriptUriDetails,
+			node: sourceFile,
+			textContent: scriptContent.textContent,
+			areaController: scriptContent.areaController,
+		};
+		embeddedFilesMap.set(scriptUriDetails.uriString, this.scriptEmbedFileContentArea.textContent);
+		// create style tag Content
+		this.styleEmbedFileContentAreas = [];
+		for (const node of this.sourceFile.kixStyleTagChildNodes) {
+			const styleUriDetails = getNodeUriDetails(node, this.fileName, true, "STYLE_TAG");
+			const contentArea = {
+				...styleUriDetails,
+				node: node,
+				textContent: createStyleTagContent(originalTextContent, node),
+				areaController: undefined
+			};
+			embeddedFilesMap.set(styleUriDetails.uriString, contentArea.textContent);
+			this.styleEmbedFileContentAreas.push(contentArea);
 		}
 
-		const styleTagContent = createStyleTagContent(this, styleContentNode);
-		// console.log("🚀 --> file: --> styleTagContent:", styleTagContent.textContent);
 
-		this.embeddedFilesMap.set(
-			uriToString(styleTagContent.uri),
-			styleTagContent.textContent
-		);
-		return styleTagContent;
+
+		this.formatCode = new FormatCodeController(this);
+	}
+	// embedFileEmitCache: Map<string, embedContentFile> = new Map();
+	getAllEmbedFiles(): EmbedFileContentArea[] {
+		return [
+			this.scriptEmbedFileContentArea,
+			...this.styleEmbedFileContentAreas
+		];
+	}
+	getDocumentUpdateDocumentContentAtPositions(position: Position): EmbedFileContentArea {
+		const offset = this.textdocument.offsetAt(position);
+		return findContentLocationArea(
+			offset,
+			this.styleEmbedFileContentAreas
+		) || this.scriptEmbedFileContentArea;
 	}
 	getCompletionItems = getCompletionItems;
 	provideDefinition = provideDefinition;
@@ -136,7 +124,7 @@ export class TextDocumentController {
 	provideDocumentFormattingEdits(options: FormattingOptions): TextEdit[] {
 		const embedContentFiles = this.getAllEmbedFiles();
 		// formatDocument(this);
-		this.formatCode.format();
+		this.formatCode.format(options);
 		return [];
 		// return Promise.all(embedContentFiles.map(embedFileDetails => {
 		// 	const {
@@ -190,56 +178,69 @@ export class TextDocumentController {
 }
 
 
-type FormatTsNode = ts.NodeArray<ts.JsxChild> | ts.Node
-type FormatElement = { formatNode: FormatTsNode, childrenNode: FormatTsNode }
-const formatElements: FormatElement[] = [];
+type FormatTsNode = Required<{
+	pos: number,
+	end: number,
+}>
 
+type FormatElement = {
+	formatNode: FormatTsNode,
+	formatCodeUri: EmbedContentUriDetails,
+	childrenNode: FormatTsNode,
+}
 class FormatCodeController {
 	sourceFile: ts.SourceFile
 	formatElements: FormatElement[]
+	scriptTagChildNodes: ts.JsxElement[]
+	styleTagChildNodes: ts.JsxElement[]
 	originalTextContent: string
-	constructor(sourceFile: ts.SourceFile) {
-		const scriptTagChildNodes = sourceFile.kixScriptTagChildNodes;
-		const styleTagChildNodes = sourceFile.kixStyleTagChildNodes;
-		this.sourceFile = sourceFile;
+	textDocumentController: TextDocumentController
+	constructor(textDocumentController: TextDocumentController) {
+		this.textDocumentController = textDocumentController;
+		this.sourceFile = textDocumentController.sourceFile;
+		this.scriptTagChildNodes = this.sourceFile.kixScriptTagChildNodes;
+		this.styleTagChildNodes = this.sourceFile.kixStyleTagChildNodes;
 		this.formatElements = [];
-		this.originalTextContent = sourceFile.text;
+		this.originalTextContent = this.sourceFile.text;
 
-		for (const el of scriptTagChildNodes) {
+		for (const el of this.scriptTagChildNodes) {
 			this.formatElements.push({
 				formatNode: el,
+				formatCodeUri: getNodeUriDetails(el, this.textDocumentController.fileName, false, "FORMAT_SCRIPT_CODE"),
 				childrenNode: el.children
 			});
 		}
-		for (const el of styleTagChildNodes) {
+		for (const el of this.styleTagChildNodes) {
 			this.formatElements.push({
 				formatNode: el,
+				formatCodeUri: getNodeUriDetails(el, this.textDocumentController.fileName, true, "FORMAT_STYLE_CODE"),
 				childrenNode: el.children
 			});
 		}
+
+		// this.options = {};
 	}
-	containNode(node: FormatTsNode, check: FormatTsNode) {
-		return node.pos < check.pos && check.end < node.end;
+	containNode = containNode
+	async format(options: FormattingOptions,) {
+		console.log("🚀 --> file: --> this.formatCode():", await this.formatCode(options));
 	}
-	format() {
-		console.log("🚀 --> file: --> this.formatCode():", this.formatCode());
-	}
-	formatCode() {
+	async formatCode(options: FormattingOptions) {
 		return this.formatNode(
 			{
 				formatNode: this.sourceFile,
+				formatCodeUri: getNodeUriDetails(this.sourceFile, this.textDocumentController.fileName, false, "FORMAT_SCRIPT_CODE"),
 				childrenNode: this.sourceFile,
 			},
-			this.originalTextContent,
+			options,
 			this.formatElements
 		);
 	}
-	formatNode(
+	async formatNode(
 		element: FormatElement,
-		originalTextContent: string,
+		options: FormattingOptions,
 		preChildElements: FormatElement[]
 	) {
-		let nodeTextContent = originalTextContent;
+		let nodeTextContent = this.originalTextContent;
 		const updatedPreChildNodes: FormatElement[] = [];
 		const childNodes: FormatElement[] = [];
 
@@ -264,11 +265,15 @@ class FormatCodeController {
 
 
 		let textContent = nodeTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
-		console.log("🚀 --> file: index.ts:246 --> formatDocument --> textContent:", textContent);
+		const formateDCode = await this.formatContent(textContent, options, element);
+
+		console.log("🚀 --> file: index.ts:269 --> FormatCodeController --> formateDCode:", formateDCode);
+		// console.log("🚀 --> file: index.ts:287 --> FormatCodeController --> textContent:", textContent);
+
 
 
 		for (const childNode of childNodes) {
-			const content = this.formatNode(childNode, originalTextContent, updatedPreChildNodes.filter(n => this.containNode(childNode.formatNode, n.formatNode)));
+			const content = await this.formatNode(childNode, options, updatedPreChildNodes.filter(n => this.containNode(childNode.formatNode, n.formatNode)));
 			textContent =
 				textContent.slice(0, childNode.childrenNode.pos - element.childrenNode.pos) +
 				content +
@@ -276,7 +281,22 @@ class FormatCodeController {
 		}
 		return textContent;
 	}
+	async formatContent(content: string, options: FormattingOptions, element: FormatElement) {
+		const embeddedUri = element.formatCodeUri;
+		this.textDocumentController.embeddedFilesMap.set(embeddedUri.uriString, content);
+		const format = await commands.executeCommand<TextEdit[]>(
+			'vscode.executeFormatDocumentProvider',
+			embeddedUri.uri,
+			options
+		);
+		this.textDocumentController.embeddedFilesMap.delete(embeddedUri.uriString);
+
+		return format;
+	}
 }
+
+
+
 
 // let inc = 0;
 // const getSelectorKey = () =>

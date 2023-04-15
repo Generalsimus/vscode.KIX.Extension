@@ -1,10 +1,11 @@
 import { DefinitionLink, Definition, Location, Position, ProviderResult, Uri, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
 import { uriToString } from './utils/uriToString';
+import { TextDocumentController } from '.';
 
 
 // TODO: იმპლემენტაცია გადასამოწმებელია დაზუსტებით
-export function provideImplementation(position: Position) {
+export function provideImplementation(this: TextDocumentController, position: Position) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(position);
 	const {
 		uri: embeddedUri,

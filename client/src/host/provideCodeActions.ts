@@ -1,7 +1,8 @@
 import { CodeAction, Command, Range, commands } from 'vscode';
 import { createProxyRedirectValue, proxyRedirectEmbedFile } from './utils/proxyRedirectEmbedFile';
+import { TextDocumentController } from '.';
 
-export function provideCodeActions(range: Range) {
+export function provideCodeActions(this: TextDocumentController, range: Range) {
 	const positionDetails = this.getDocumentUpdateDocumentContentAtPositions(range.start);
 	const {
 		uri: embeddedUri,
