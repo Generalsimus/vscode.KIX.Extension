@@ -10,6 +10,7 @@ export const makeScriptTagsSafe = (
 
 	for (const scriptTaNode of scriptTagChildNodes) {
 		const { pos, end } = scriptTaNode.children;
+		console.log("🚀 --> file: makeScriptTagsSafe.ts:13 --> pos, end :", pos, end );
 
 
 		areaController.addContent(`{()=>{\n`, `\n}}`, pos, end);
