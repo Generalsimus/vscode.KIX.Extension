@@ -1,6 +1,7 @@
 import {
 	FormattingOptions,
 	Position,
+	Range,
 	TextDocument,
 	TextEdit,
 	Uri,
@@ -27,6 +28,8 @@ import { provideInlayHints } from './provideInlayHints';
 import { removeAllContentFromString } from './utils/removeAllContentFromString';
 import { EmbedContentUriDetails, getNodeUriDetails } from './utils/getNodeUriDetails';
 import { containNode } from './utils/nodeContains';
+import { newLIneCharCode } from './utils/helpers';
+import { replaceRangeContent } from './utils/replaceRangeContent';
 // commands.getCommands().then(red => {
 // 	console.log("🚀 --> file: index.ts:30 --> commands.getCommands --> red:", red);
 
@@ -265,9 +268,18 @@ class FormatCodeController {
 
 
 		let textContent = nodeTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
-		const formateDCode = await this.formatContent(textContent, options, element);
+		const formattedCode = await this.formatContent(textContent, options, element);
 
-		console.log("🚀 --> file: index.ts:269 --> FormatCodeController --> formateDCode:", formateDCode);
+		const BEFORE = textContent;
+		for (const format of formattedCode) {
+			textContent = replaceRangeContent(format.range, textContent, format.newText);
+		}
+		// 	ss;
+		console.log("🚀 --> file: --> BEFORE:", BEFORE);
+		console.log("🚀 --> file: --> AFTER:", textContent);
+		console.log("🚀 --> file: index.ts:271 --> FormatCodeController --> formattedCode:", formattedCode);
+		// 	TextEdit.replace;
+		// console.log("🚀 --> file: index.ts:269 --> FormatCodeController --> formateDCode:", formateDCode);
 		// console.log("🚀 --> file: index.ts:287 --> FormatCodeController --> textContent:", textContent);
 
 
@@ -294,7 +306,6 @@ class FormatCodeController {
 		return format;
 	}
 }
-
 
 
 
