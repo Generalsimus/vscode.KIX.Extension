@@ -72,9 +72,16 @@ export class FormatCodeController {
 	) {
 
 		let nodeTextContent = this.originalTextContent;
+		// let nodeOriginalTextContent = this.originalTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
 		const updatedPreChildNodes: FormatElement[] = [];
-		const childNodes: FormatElement[] = [];
+		const childNodes: {
+			formatElement: FormatElement,
+			marker: string
+		}[] = [];
 
+
+
+		// let startPos = 0;
 		parentFor: for (const child of preChildElements) {
 			for (const haveParentCHild of preChildElements) {
 				if (this.containNode(haveParentCHild.formatNode, child.formatNode)) {
@@ -84,41 +91,66 @@ export class FormatCodeController {
 				}
 			}
 
-			const { pos, end } = child.childrenNode;
+
+			// const { pos, end } = child.childrenNode;
+			const pos = child.childrenNode.pos;
+			const end = child.childrenNode.end;
+			// const pos = child.childrenNode.pos;
+			// const end = child.childrenNode.end;
+			// const marker = `123`;
+			const marker = `asdaASDASD${Math.random()}DSD`;
+			// console.log("EEE", { pos, end, sizeChange, sl: nodeTextContent.slice(0, pos) });
+			// nodeTextContent = (
+			// 	nodeTextContent +
+			// 	nodeOriginalTextContent.slice(startPos, pos - element.childrenNode.pos) +
+			// 	marker
+			// );
+			// nodeOriginalTextContent = nodeTextContent + nodeOriginalTextContent.slice(end);
+			// startPos = (end - element.childrenNode.pos);
+			// sizeChange = sizeChange + ((end - pos) - marker.length);
+			// 
+
 			nodeTextContent = nodeTextContent.slice(0, pos) +
 				removeAllContentFromString(nodeTextContent, pos, end) +
 				nodeTextContent.slice(end, nodeTextContent.length);
 
-			childNodes.push(child);
+			childNodes.push({
+				formatElement: child,
+				marker: marker,
+			});
 
 		}
+		// nodeTextContent = nodeTextContent + nodeOriginalTextContent.slice(startPos);
+		const textContent = nodeTextContent;
+		console.log("🚀 --> file: index.ts:106 --> FormatCodeController --> textContent:", textContent);
+
 
 
 
 		// const { pos: originalPos, end: originalEnd } = element.childrenNode;
-		let textContent = nodeTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
+		// let textContent = nodeTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
 		const formattedCode = await this.formatContent(textContent, options, element);
 
 		const BEFORE = textContent;
 		for (const format of formattedCode) {
 			// textContent = replaceRangeContent(format.range, textContent, format.newText);
 		}
-		// 	ss;
-		console.log("🚀 --> file: --> BEFORE:", BEFORE);
-		console.log("🚀 --> file: --> AFTER:", textContent);
-		console.log("🚀 --> file: index.ts:271 --> FormatCodeController --> formattedCode:", formattedCode);
-		// 	TextEdit.replace;
-		// console.log("🚀 --> file: index.ts:269 --> FormatCodeController --> formateDCode:", formateDCode);
-		// console.log("🚀 --> file: index.ts:287 --> FormatCodeController --> textContent:", textContent);
+
+		// console.log("🚀 --> file: --> BEFORE:", BEFORE);
+		// console.log("🚀 --> file: --> AFTER:", textContent);
+		// console.log("🚀 --> file: index.ts:271 --> FormatCodeController --> formattedCode:", formattedCode);
 
 
 
-		for (const childNode of childNodes) {
-			const content = await this.formatNode(childNode, options, updatedPreChildNodes.filter(n => this.containNode(childNode.formatNode, n.formatNode)));
-			textContent =
-				textContent.slice(0, childNode.childrenNode.pos - element.childrenNode.pos) +
-				content +
-				textContent.slice(childNode.childrenNode.end - element.childrenNode.pos, textContent.length);
+
+
+		for (const { formatElement, marker } of childNodes) {
+			const content = await this.formatNode(formatElement, options, updatedPreChildNodes.filter(n => this.containNode(formatElement.formatNode, n.formatNode)));
+			textContent.replace(marker, content);
+			// textContent =
+			// 	textContent.slice(0, childNode.childrenNode.pos - element.childrenNode.pos) +
+			// 	content +
+			// 	textContent.slice(childNode.childrenNode.end - element.childrenNode.pos, textContent.length);
 		}
 		return textContent;
 	}
