@@ -1,10 +1,11 @@
-import { FormattingOptions, TextEdit, commands } from 'vscode';
+import { FormattingOptions, Range, TextEdit, commands } from 'vscode';
 import { TextDocumentController } from '..';
 import ts from '../../../../../../../TypeScript-For-KIX/lib/tsserverlibrary';
 import { EmbedContentUriDetails, getNodeUriDetails } from '../utils/getNodeUriDetails';
 import { containNode } from '../utils/nodeContains';
 import { removeAllContentFromString } from '../utils/removeAllContentFromString';
 import { replaceRangeContent } from '../utils/replaceRangeContent';
+import { getLineColumnFromTextPosition } from '../utils/getLineColumnFromTextPosition';
 
 
 type FormatTsNode = Required<{
@@ -31,6 +32,7 @@ export class FormatCodeController {
 		this.styleTagChildNodes = this.sourceFile.kixStyleTagChildNodes;
 		this.formatElements = [];
 		this.originalTextContent = this.sourceFile.text;
+		// this.originalTextContent = `${this.sourceFile.text}`;
 
 		for (const el of this.scriptTagChildNodes) {
 			this.formatElements.push({
@@ -46,15 +48,29 @@ export class FormatCodeController {
 				childrenNode: el.children
 			});
 		}
+		this.formatElements = this.formatElements.sort((e1, e2) => (e1.formatNode.pos - e2.formatNode.pos));
 
 		// this.options = {};
 	}
 	containNode = containNode
 	async format(options: FormattingOptions) {
-		console.log("🚀 --> file: --> this.formatCode():", await this.formatCode(options));
-		// new TextEdit()
+		const format = await this.formatCode(options);
+		console.log("🚀 --> file: --> this.formatCode():", format);
+		// console.log("🚀 --> file: index.ts:143 --> FormatCodeController --> result --> options:", options);
+		const endOfPos = getLineColumnFromTextPosition(this.originalTextContent, this.sourceFile.end);
+		return new TextEdit(
+			new Range(
+				0,
+				0,
+				endOfPos.line,
+				endOfPos.column,
+			),
+			format
+		);
+		// return formattedTextEdits;
 	}
 	async formatCode(options: FormattingOptions) {
+
 		return this.formatNode(
 			{
 				formatNode: this.sourceFile,
@@ -65,23 +81,31 @@ export class FormatCodeController {
 			this.formatElements
 		);
 	}
+	keyIncId = 0;
+	getSafeJSXChildKey() {
+		return `A423FGHJ${Math.random()}KDF345${Math.random()}689${(this.keyIncId = ++this.keyIncId)}9HN`;
+	}
+	addTabSpaceInContent(content: string, hierarchialIndex = 0, spaceSize = 0) {
+		const space = new Array(spaceSize * hierarchialIndex + 1).join(" ");
+
+		// return "\n" + space + content.trim().split("\n").join(`\n${space}`) + "\n";
+		return `\n${space}${content.trim().replace(/\n/g, `\n${space}`)}\n`;
+		// return "\n" + space + content.trim().replace(/\n/g, `\n${space}`) + "\n";
+	}
 	async formatNode(
 		element: FormatElement,
 		options: FormattingOptions,
-		preChildElements: FormatElement[]
+		preChildElements: FormatElement[],
+		hierarchialIndex = 2,
 	) {
 
-		let nodeTextContent = this.originalTextContent;
-		// let nodeOriginalTextContent = this.originalTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
+		const nodeTextContent = this.originalTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
 		const updatedPreChildNodes: FormatElement[] = [];
-		const childNodes: {
-			formatElement: FormatElement,
-			marker: string
-		}[] = [];
+		const childNodes: FormatElement[] = [];
 
+		const elementChildCuts: string[] = [];
 
-
-		// let startPos = 0;
+		let startPos = 0;
 		parentFor: for (const child of preChildElements) {
 			for (const haveParentCHild of preChildElements) {
 				if (this.containNode(haveParentCHild.formatNode, child.formatNode)) {
@@ -92,67 +116,57 @@ export class FormatCodeController {
 			}
 
 
-			// const { pos, end } = child.childrenNode;
-			const pos = child.childrenNode.pos;
-			const end = child.childrenNode.end;
-			// const pos = child.childrenNode.pos;
-			// const end = child.childrenNode.end;
-			// const marker = `123`;
-			const marker = `asdaASDASD${Math.random()}DSD`;
-			// console.log("EEE", { pos, end, sizeChange, sl: nodeTextContent.slice(0, pos) });
-			// nodeTextContent = (
-			// 	nodeTextContent +
-			// 	nodeOriginalTextContent.slice(startPos, pos - element.childrenNode.pos) +
-			// 	marker
-			// );
-			// nodeOriginalTextContent = nodeTextContent + nodeOriginalTextContent.slice(end);
-			// startPos = (end - element.childrenNode.pos);
-			// sizeChange = sizeChange + ((end - pos) - marker.length);
-			// 
+			const { pos, end } = child.childrenNode;
+			elementChildCuts.push(
+				nodeTextContent.slice(startPos, pos - element.childrenNode.pos),
+				nodeTextContent.slice(
+					pos - element.childrenNode.pos,
+					(startPos = end - element.childrenNode.pos)
+				),
+			);
 
-			nodeTextContent = nodeTextContent.slice(0, pos) +
-				removeAllContentFromString(nodeTextContent, pos, end) +
-				nodeTextContent.slice(end, nodeTextContent.length);
-
-			childNodes.push({
-				formatElement: child,
-				marker: marker,
-			});
+			childNodes.push(child);
 
 		}
-		// nodeTextContent = nodeTextContent + nodeOriginalTextContent.slice(startPos);
-		const textContent = nodeTextContent;
-		console.log("🚀 --> file: index.ts:106 --> FormatCodeController --> textContent:", textContent);
+		elementChildCuts.push(nodeTextContent.slice(startPos));
+		const childKey = this.getSafeJSXChildKey();
+		let textContent = elementChildCuts.reduce((content, el, index) => {
+			return content + ((index + 1) % 2 === 0 ? childKey : el);
+		}, "");
+		// console.log("🚀 --> file: index.ts:118 --> FormatCodeController --> textContent --> elementChildCuts:", elementChildCuts);
 
 
 
 
-		// const { pos: originalPos, end: originalEnd } = element.childrenNode;
-		// let textContent = nodeTextContent.slice(element.childrenNode.pos, element.childrenNode.end);
 		const formattedCode = await this.formatContent(textContent, options, element);
-
-		const BEFORE = textContent;
 		for (const format of formattedCode) {
-			// textContent = replaceRangeContent(format.range, textContent, format.newText);
+			textContent = replaceRangeContent(format.range, textContent, format.newText);
 		}
-
-		// console.log("🚀 --> file: --> BEFORE:", BEFORE);
-		// console.log("🚀 --> file: --> AFTER:", textContent);
-		// console.log("🚀 --> file: index.ts:271 --> FormatCodeController --> formattedCode:", formattedCode);
+		const sliceContent = textContent.split(childKey);
 
 
+		// console.log("🚀 --> file: index.ts:174 --> sliceContent:", sliceContent);
 
+		const result = await Promise.all(sliceContent.reduce<(string | Promise<string>)[]>((contents, el, index) => {
+			contents.push(el.trim());
+			const formatElement = childNodes[index];
+			if (formatElement) {
+				contents.push(
+					this.formatNode(
+						formatElement,
+						options,
+						updatedPreChildNodes.filter(n => this.containNode(formatElement.formatNode, n.formatNode)),
+						hierarchialIndex + 1
+					).then(content => {
+						return this.addTabSpaceInContent(content, hierarchialIndex, options.tabSize);
+					})
+				);
+			}
+			return contents;
+		}, [])).then(contents => contents.join(""));
+		// console.log("🚀 --> file: index.ts:192 --> FormatCodeController --> result --> result:", result);
 
-
-		for (const { formatElement, marker } of childNodes) {
-			const content = await this.formatNode(formatElement, options, updatedPreChildNodes.filter(n => this.containNode(formatElement.formatNode, n.formatNode)));
-			textContent.replace(marker, content);
-			// textContent =
-			// 	textContent.slice(0, childNode.childrenNode.pos - element.childrenNode.pos) +
-			// 	content +
-			// 	textContent.slice(childNode.childrenNode.end - element.childrenNode.pos, textContent.length);
-		}
-		return textContent;
+		return result;
 	}
 	async formatContent(content: string, options: FormattingOptions, element: FormatElement) {
 		const embeddedUri = element.formatCodeUri;

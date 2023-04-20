@@ -124,10 +124,10 @@ export class TextDocumentController {
 	provideColorPresentations = provideColorPresentations;
 	provideDocumentColors = provideDocumentColors;
 	provideInlayHints = provideInlayHints;
-	provideDocumentFormattingEdits(options: FormattingOptions): TextEdit[] {
-		const embedContentFiles = this.getAllEmbedFiles();
+	provideDocumentFormattingEdits(options: FormattingOptions) {
+		// const embedContentFiles = this.getAllEmbedFiles();
 		// formatDocument(this);
-		this.formatCode.format(options);
-		return [];
+		return this.formatCode.format(options).then(e => [e]);
+		// return [await this.formatCode.format(options)];
 	}
 }
